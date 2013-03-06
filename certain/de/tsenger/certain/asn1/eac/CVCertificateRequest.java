@@ -38,7 +38,6 @@ public class CVCertificateRequest extends ASN1Object
 
             initCertBody(DERApplicationSpecific.getInstance(seq.getObjectAt(0)));
             
-            //TODO extract outer CAR
             outerCAR = new CertificationAuthorityReference(DERApplicationSpecific.getInstance(seq.getObjectAt(1)).getContents());
 
             outerSignature = DERApplicationSpecific.getInstance(seq.getObjectAt(seq.size() - 1)).getContents();

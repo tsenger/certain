@@ -211,9 +211,7 @@ public class CertificateBody  extends ASN1Object
 	 * @param certificationAuthorityReference the DERApplicationSpecific containing the CertificationAuthorityReference.
 	 * @throws IllegalArgumentException if the DERApplicationSpecific is not valid.
 	 */
-	private void setCertificationAuthorityReference(
-			DERApplicationSpecific certificationAuthorityReference)
-				throws IllegalArgumentException {
+	private void setCertificationAuthorityReference(DERApplicationSpecific certificationAuthorityReference) throws IllegalArgumentException {
 		if (certificationAuthorityReference.getApplicationTag() == EACTags.CERTIFICATION_AUTHORITY_REFERENCE) {
 			this.certificationAuthorityReference = certificationAuthorityReference;
 			certificateType |= CAR;

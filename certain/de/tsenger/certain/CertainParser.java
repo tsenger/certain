@@ -19,7 +19,7 @@ import de.tsenger.tools.HexString;
 public class CertainParser {
 	
 
-	private final CertificateBody body;
+	private CertificateBody body;
 	private byte[] profileId;
 	private CertificationAuthorityReference car;
 	private PublicKeyDataObject pubKey;	
@@ -42,13 +42,27 @@ public class CertainParser {
 	private String effdateStr;
 	private String expdateStr;
 	
-	public CertainParser(CertificateBody body, boolean isCertificate) throws CVParserException {
+	private CertStorage certStorage;
+	
+	public CertainParser(CertStorage certStore) {
+		this.certStorage = certStore;
+	}
+	
+	public CertainParser(CertificateBody body, boolean isCertificate){
 		this.body = body;
 		this.isCertificate = isCertificate;
 		parse();
 	}
 	
-	private void parse() throws CVParserException {
+	public String parse(String chr) {
+		this.body = certStorage.getCertByCHR(chr).getBody();
+		this.isCertificate = true;
+		parse();
+		return getContentString();
+		
+	}
+	
+	private void parse()  {
 
 		if (isCertificate) {
 			chat = body.getCertificateHolderAuthorization();
@@ -64,7 +78,7 @@ public class CertainParser {
 		car = body.getCertificationAuthorityReference();
 		errorText = "";
 		if (isCertificate&&car==null) errorText = " -> Certification authority reference is not set";
-		else if (isCertificate||chat!=null) {
+		else if (isCertificate||car!=null) {
 			carStr = checkCHR(car);
 		}
 		
@@ -99,7 +113,9 @@ public class CertainParser {
 		chrStr = checkCHR(chr);
 		
 		errorText = "";
-		if (chat==null&&isCertificate) throw new CVParserException("Certificate Holder Authorization Template not set"); 
+		if (chat==null&&isCertificate) {
+			authorizationBitStr = authorizationStr = terminalType = " -> CHAT not set!";
+		}
 		else if(isCertificate) {
 			terminalType = chat.getTerminalTypeDescription();
 			authorizationBitStr = Long.toBinaryString(Converter.ByteArrayToLong(chat.getAccessRights()));
@@ -178,6 +194,35 @@ public class CertainParser {
 		else if (chat.getOid().equals(CertificateHolderAuthorization.id_ST)) {
 			sw.write("Generate qualified electronic signature: " + chat.hasAuth(CertificateHolderAuthorization.ST_GENQES) + "\n");
 			sw.write("Generate electronic signature: " + chat.hasAuth(CertificateHolderAuthorization.ST_GENES));
+		}
+		return sw.toString();
+	}
+	
+	private String getContentString() {		
+		StringWriter sw = new StringWriter();
+		sw.write("Certificate Authority Reference (CAR): ");
+		sw.write(getCarString()+"\n\n");
+		
+		sw.write("Public Key\n");
+		sw.write(getPublicKeyString()+"\n\n");
+
+		sw.write("Certificate Holder Reference (CHR): ");
+		sw.write(getChrString()+"\n\n");
+
+		if (isCertificate) {
+			sw.write("Certificate Holder Authorization Template (CHAT)\n");
+			sw.write("Terminal Type: ");
+			sw.write(getTerminalType()+"\n");
+			sw.write("Role: ");
+			sw.write(getCertificateRole()+"\n");
+			sw.write("Authorizations: ");
+			sw.write(getAuthorizationBitString()+"\n");
+			sw.write(getAuthorizationString()+"\n\n");
+		
+			sw.write("Certificate Effective Date: ");
+			sw.write(getEffectiveDateString()+"\n");
+			sw.write("Certificate Expiration Date: ");
+			sw.write(getExpirationDateString()+"\n\n");
 		}
 		return sw.toString();
 	}

@@ -26,8 +26,7 @@ import de.tsenger.tools.Converter;
  *  }
  * </pre>
  */
-public class CVCertificate
-    extends ASN1Object
+public class CVCertificate  extends ASN1Object
 {
     private CertificateBody certificateBody;
     private byte[] signature;
@@ -269,8 +268,7 @@ public class CVCertificate
      * @throws IOException
      * @see CertificateHolderAuthorization
      */
-    public byte[] getRole()
-        throws IOException
+    public byte[] getRole() throws IOException
     {
         CertificateHolderAuthorization cha = certificateBody.getCertificateHolderAuthorization();
         return cha.getAccessRights();
@@ -300,7 +298,6 @@ public class CVCertificate
      * @throws IOException
      */
     public int getHolderAuthorizationRole()
-        throws IOException
     {
         int rights = certificateBody.getCertificateHolderAuthorization().getAccessRights()[0];
         return rights;

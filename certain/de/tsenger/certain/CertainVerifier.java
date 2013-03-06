@@ -55,9 +55,24 @@ public class CertainVerifier {
 		this.sig = getSignature(pubKeyObj.getUsage());
 	}
 	
+	public CertainVerifier(PublicKeyDataObject pubKeyObj, PublicKeyDataObject pubKeyObjWithoutDomainParameter) throws InvalidKeySpecException, EACException, NoSuchProviderException, NoSuchAlgorithmException {
+		this.publicKey = getECPublicKeyPublicKey((ECDSAPublicKey)pubKeyObj, (ECDSAPublicKey)pubKeyObjWithoutDomainParameter);
+		this.sig = getSignature(pubKeyObj.getUsage());
+	}
+	
 	public boolean hasValidOuterSignature(CVCertificateRequest req) throws OperatorCreationException, EACException {
 		try {
-			byte[] data = req.getEncoded();			
+			byte[] reqData = req.getEncoded();	
+			byte[] outerCAR = req.getOuterCAR().getEncoded();
+			byte[] data = new byte[reqData.length+2+outerCAR.length];
+			
+			//HACK we need the tag and the length of outer car
+			data[reqData.length]=0x42;
+			data[reqData.length+1]=(byte) outerCAR.length;
+						
+			System.arraycopy(reqData, 0, data, 0, reqData.length);			
+			System.arraycopy(outerCAR, 0, data, reqData.length+2, outerCAR.length);
+			
 			byte[] signature = req.getOuterSignature();
 			
 			return verify(data, signature);
@@ -123,12 +138,21 @@ public class CertainVerifier {
 			}
 		}
 	}
-
+	
 	private PublicKey getECPublicKeyPublicKey(ECDSAPublicKey key) throws EACException, InvalidKeySpecException {
-		ECParameterSpec spec = getParams(key);
+		return getECPublicKeyPublicKey(key, null);
+	}
+
+	private PublicKey getECPublicKeyPublicKey(ECDSAPublicKey keyWithDP, ECDSAPublicKey keyWithOutDP) throws EACException, InvalidKeySpecException {
+		ECParameterSpec spec = getParams(keyWithDP);
 		ECCurve curve = spec.getCurve();
 
-		ECPoint point = curve.decodePoint(key.getPublicPointY());
+		ECPoint point;
+		if(keyWithOutDP!=null) {
+			point = curve.decodePoint(keyWithOutDP.getPublicPointY());
+		} else {
+			point = curve.decodePoint(keyWithDP.getPublicPointY());
+		}
 		ECPublicKeySpec pubKeySpec = new ECPublicKeySpec(point, spec);
 
 		KeyFactory factk;
