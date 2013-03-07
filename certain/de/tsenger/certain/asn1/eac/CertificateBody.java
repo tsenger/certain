@@ -407,6 +407,13 @@ public class CertificateBody  extends ASN1Object
     {
         return new CertificateHolderReference(certificateHolderReference.getContents());
     }
+    
+    public String getChrString() {
+    	CertificateHolderReference chr = getCertificateHolderReference();
+    	if (chr==null) return null;
+    	return chr.getCountryCode()+chr.getHolderMnemonic()+chr.getSequenceNumber();
+    }
+    
 
     /**
      * CertificateProfileIdentifier : version of the certificate format. Must be 0 (version 1)
@@ -431,6 +438,12 @@ public class CertificateBody  extends ASN1Object
             return new CertificationAuthorityReference(certificationAuthorityReference.getContents());
         }
         return null;
+    }
+    
+    public String getCarString() {
+    	CertificationAuthorityReference car = getCertificationAuthorityReference();
+    	if (car==null) return null;
+    	return car.getCountryCode()+car.getHolderMnemonic()+car.getSequenceNumber();
     }
 
     /**

@@ -1,6 +1,7 @@
 package de.tsenger.certain;
 
 import java.util.HashMap;
+import java.util.Set;
 
 import de.tsenger.certain.asn1.eac.CVCertificate;
 import de.tsenger.certain.asn1.eac.CertificateHolderReference;
@@ -20,13 +21,36 @@ public class CertStorage {
 	}	
 	
 	public String getCarString(String chrStr) {
-		CertificationAuthorityReference car = certs.get(chrStr).getAuthorityReference();
+		CVCertificate cert = certs.get(chrStr);
+		if (cert==null) return null;
+		CertificationAuthorityReference car = cert.getAuthorityReference();
 		return car.getCountryCode()+car.getHolderMnemonic()+car.getSequenceNumber();
+	}
+	
+	public String getCarString(CertificateHolderReference chr) {
+		String chrStr = chr.getCountryCode()+chr.getHolderMnemonic()+chr.getSequenceNumber();
+		return getCarString(chrStr);
 	}
 	
 	public CVCertificate getCertByCHR(CertificateHolderReference chr) {
 		String chrStr = chr.getCountryCode()+chr.getHolderMnemonic()+chr.getSequenceNumber();
 		return certs.get(chrStr);
+	}
+	
+	public int getSize() {
+		return certs.size();
+	}
+	
+	public boolean isEmpty() {
+		return certs.isEmpty();
+	}
+	
+	public Set<String> getKeys() {
+		return certs.keySet();
+	}
+	
+	public boolean containsKey(String chrStr) {
+		return certs.keySet().contains(chrStr);
 	}
 	
 	public CVCertificate getCertByCHR(String chrStr) {

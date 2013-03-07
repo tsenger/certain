@@ -282,6 +282,10 @@ public class CVCertificate  extends ASN1Object
     {
         return certificateBody.getCertificationAuthorityReference();
     }
+    
+    public String getCarString() {
+    	return certificateBody.getCarString();
+    }
 
     /**
      * @return the Holder Reference Field of the certificate
@@ -290,6 +294,10 @@ public class CVCertificate  extends ASN1Object
     public CertificateHolderReference getHolderReference()
     {
         return certificateBody.getCertificateHolderReference();
+    }
+    
+    public String getChrString() {
+    	return certificateBody.getChrString();
     }
 
     /**
