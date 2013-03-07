@@ -22,6 +22,8 @@ import de.tsenger.certain.asn1.eac.ECDSAPublicKey;
 import de.tsenger.certain.asn1.eac.PublicKeyDataObject;
 
 public class CertainMain {
+	
+	private static final String version = "0.2";
 
 	@Option(name = "-cvca", usage = "CVCA certificate input file")
 	private File cvcaCertFile;
@@ -53,6 +55,7 @@ public class CertainMain {
 	 * @throws ParseException
 	 */
 	public static void main(String[] args) throws IOException {
+		System.out.println("certain (v"+ version + ") - a cv certificate parser");
 		Security.addProvider(new BouncyCastleProvider());
 		CertainMain cm = new CertainMain();
 		
@@ -63,8 +66,8 @@ public class CertainMain {
 			cm.run();
 		} catch (CmdLineException e) {
 			// handling of wrong arguments
-			System.err.println(e.getMessage());
-			parser.printUsage(System.err);
+			System.out.println(e.getMessage());
+			parser.printUsage(System.out);
 		}
 	}
 
@@ -73,9 +76,9 @@ public class CertainMain {
 		readFilesToCVC();
 		cvParser = new CertainParser(certStore);
 		
-		if (cvcaCertFile!=null) {			
-
-			System.out.println("--- start parsing of "+ cvcaCertFile.getName()+" ---");
+		if (cvcaCertFile!=null) {
+			printBanner(cvcaCertFile.getName(), true);
+			
 			CVCertificate cert = certStore.getCertByCHR(cvcaChrStr);
 			
 			int role = cert.getHolderAuthorizationRole()&0xC0;
@@ -90,14 +93,13 @@ public class CertainMain {
 				System.out.println("Signature is " + (verifier.hasValidSignature(cert) ? "VALID" : "!!! INVALID !!!"));
 			} catch (Exception e) {
 				System.out.println("Couldn't verifiy signature: " + e.getLocalizedMessage());
-			}
-			
-			System.out.println("--- end parsing of "+ cvcaCertFile.getName()+" ---\n");
+			}			
+			printBanner(cvcaCertFile.getName(), false);
 		}
 		
-		if (foreignCvcaCertFile!=null) {			
-
-			System.out.println("--- start parsing of "+ foreignCvcaCertFile.getName()+" ---");
+		if (foreignCvcaCertFile!=null) {
+			printBanner(foreignCvcaCertFile.getName(), true);
+			
 			CVCertificate cert = certStore.getCertByCHR(foreignCvcaChrStr);
 			
 			int role = cert.getHolderAuthorizationRole()&0xC0;
@@ -112,14 +114,13 @@ public class CertainMain {
 				System.out.println("Signature is " + (verifier.hasValidSignature(cert) ? "VALID" : "!!! INVALID !!!"));
 			} catch (Exception e) {
 				System.out.println("Couldn't verifiy signature: " + e.getLocalizedMessage());
-			}
-			
-			System.out.println("--- end parsing of "+ foreignCvcaCertFile.getName()+" ---\n");
+			}			
+			printBanner(foreignCvcaCertFile.getName(), false);
 		}
 		
-		if (dvCertFile!=null) {
+		if (dvCertFile!=null) {			
+			printBanner(dvCertFile.getName(), true);
 			
-			System.out.println("--- start parsing of "+ dvCertFile.getName()+" ---");
 			CVCertificate cert = certStore.getCertByCHR(dvChrStr);
 			
 			int role = cert.getHolderAuthorizationRole()&0xC0;
@@ -138,12 +139,12 @@ public class CertainMain {
 				}
 			} else {
 				System.out.println("\tCan't check signature. No matching CVCA Certificate available.");
-			}
-			System.out.println("--- end parsing of "+ dvCertFile.getName()+" ---\n");
+			}			
+			printBanner(dvCertFile.getName(), false);
 		}
 		
 		if (dvReq!=null) {			
-			System.out.println("--- start parsing of "+ dvReqFile.getName()+" ---");
+			printBanner(dvReqFile.getName(), true);
 
 			CertainParser reqParser = new CertainParser(dvReq.getCertificateBody(), false);
 			printContent(reqParser);
@@ -202,8 +203,16 @@ public class CertainMain {
 					System.out.println("Can't check outer signature without matching parent DV and/or CVCA certifcate.");
 				}
 			}
-			System.out.println("--- end parsing of "+ dvReqFile.getName()+" ---\n");
+			printBanner(dvReqFile.getName(), false);
 		}
+	}
+	
+	private void printBanner(String fileName, boolean start) {
+		System.out.println("---------------------------------------------------");
+		if (start) System.out.print("Start ");
+		else System.out.print("End ");
+		System.out.println("parsing " + fileName);
+		System.out.println("---------------------------------------------------");
 	}
 	
 	private boolean equalDomainParameters(PublicKeyDataObject pk1, PublicKeyDataObject pk2) {

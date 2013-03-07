@@ -235,8 +235,9 @@ public class ECDSAPublicKey extends PublicKeyDataObject {
 		}
 	}
 
-	public boolean hasParameters() {
-		return primeModulusP != null;
+	public boolean hasDomainParameters() {
+		return ((primeModulusP!=null)&&(firstCoefA!=null)&&(secondCoefB!=null)&&(basePointG!=null)&&(orderOfBasePointR!=null)&&(cofactorF!=null));
+
 	}
 
 	public ASN1EncodableVector getASN1EncodableVector(ASN1ObjectIdentifier oid, boolean publicPointOnly) {

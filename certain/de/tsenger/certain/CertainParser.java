@@ -89,13 +89,17 @@ public class CertainParser {
 		if (pubKeyOid.on(EACObjectIdentifiers.id_TA_ECDSA)) {
 			ECDSAPublicKey pk = (ECDSAPublicKey) pubKey;
 			if ((certRole!=null&&certRole.equals("CVCA"))||!isCertificate) {
-				sw.write("0x81 Prime modulus p: " + pk.getPrimeModulusP().toString(16)+"\n");
-				sw.write("0x82 First coefficient a: " + pk.getFirstCoefA().toString(16)+"\n");
-				sw.write("0x83 Second coefficient b (): " + pk.getSecondCoefB().toString(16)+"\n");
-				sw.write("0x84 Base point G : " + HexString.bufferToHex(pk.getBasePointG())+"\n");
-				sw.write("0x85 Order of base point r : " + pk.getOrderOfBasePointR().toString(16)+"\n");
-				sw.write("0x86 Public point Y : " + HexString.bufferToHex(pk.getPublicPointY())+"\n");
-				sw.write("0x87 Cofactor f  : " + pk.getCofactorF().toString(16));
+				if (pk.hasDomainParameters()) { 
+					sw.write("0x81 Prime modulus p: " + pk.getPrimeModulusP().toString(16)+"\n");
+					sw.write("0x82 First coefficient a: " + pk.getFirstCoefA().toString(16)+"\n");
+					sw.write("0x83 Second coefficient b (): " + pk.getSecondCoefB().toString(16)+"\n");
+					sw.write("0x84 Base point G : " + HexString.bufferToHex(pk.getBasePointG())+"\n");
+					sw.write("0x85 Order of base point r : " + pk.getOrderOfBasePointR().toString(16)+"\n");
+					sw.write("0x86 Public point Y : " + HexString.bufferToHex(pk.getPublicPointY())+"\n");
+					sw.write("0x87 Cofactor f  : " + pk.getCofactorF().toString(16));
+				} else {
+					sw.write(" -> Domain Parameter are missing!");
+				}
 			} else {
 				sw.write("0x86 Public point Y : " + HexString.bufferToHex(pk.getPublicPointY()));
 			}
@@ -131,8 +135,7 @@ public class CertainParser {
 		else if(isCertificate) expdateStr = expdate.toString();
 		
 	}
-	
-	
+
 	private String checkCHR(CertificateHolderReference chr) {
 		String errorText ="";
 		try {
@@ -222,7 +225,7 @@ public class CertainParser {
 			sw.write("Certificate Effective Date: ");
 			sw.write(getEffectiveDateString()+"\n");
 			sw.write("Certificate Expiration Date: ");
-			sw.write(getExpirationDateString()+"\n\n");
+			sw.write(getExpirationDateString()+"\n");
 		}
 		return sw.toString();
 	}

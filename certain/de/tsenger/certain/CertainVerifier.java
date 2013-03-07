@@ -166,7 +166,7 @@ public class CertainVerifier {
 	}
 
 	private ECParameterSpec getParams(ECDSAPublicKey key) throws EACException {
-		if (!key.hasParameters()) {
+		if (!key.hasDomainParameters()) {
 			throw new EACException("Public key does not contains EC Params");
 		}
 
