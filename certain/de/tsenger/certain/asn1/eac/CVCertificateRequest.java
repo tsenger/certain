@@ -129,6 +129,11 @@ public class CVCertificateRequest extends ASN1Object
     public CertificationAuthorityReference getOuterCAR() {
     	return outerCAR;
     }
+    
+    public String getOuterCarStr() {
+    	CertificationAuthorityReference car = getOuterCAR();
+    	return car.getCountryCode()+car.getHolderMnemonic()+car.getSequenceNumber();
+    }
 
     /**
      * Return the public key data object carried in the request

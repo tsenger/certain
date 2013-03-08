@@ -69,7 +69,7 @@ public class Converter {
 	}
 
 	/**
-	 * Writes a <code>long</code> to byte array as sixteen bytes, high byte
+	 * Writes a <code>long</code> to byte array as eight bytes, high byte
 	 * first.
 	 * 
 	 * @param v

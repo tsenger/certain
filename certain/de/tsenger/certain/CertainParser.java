@@ -58,7 +58,7 @@ public class CertainParser {
 		this.body = certStorage.getCertByCHR(chr).getBody();
 		this.isCertificate = true;
 		parse();
-		return getContentString();
+		return getString();
 		
 	}
 	
@@ -201,16 +201,16 @@ public class CertainParser {
 		return sw.toString();
 	}
 	
-	private String getContentString() {		
+	public String getString() {		
 		StringWriter sw = new StringWriter();
-		sw.write("Certificate Authority Reference (CAR): ");
-		sw.write(getCarString()+"\n\n");
-		
-		sw.write("Public Key\n");
-		sw.write(getPublicKeyString()+"\n\n");
-
-		sw.write("Certificate Holder Reference (CHR): ");
+		sw.write("CAR: ");
+		sw.write(getCarString()+"\n");
+		sw.write("CHR: ");
 		sw.write(getChrString()+"\n\n");
+				
+		sw.write("Public Key\n");
+		sw.write(getPublicKeyString()+"\n");
+
 
 		if (isCertificate) {
 			sw.write("Certificate Holder Authorization Template (CHAT)\n");
