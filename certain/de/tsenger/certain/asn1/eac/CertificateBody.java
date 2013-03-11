@@ -62,9 +62,7 @@ public class CertificateBody  extends ASN1Object
     public static final int requestTypeWithoutCAR = 0x0D;// Request type Certificate without CAR
     public static final int requestTypeWithCAR = 0x0F;// Request type Certificate with CAR
 
-    private void setIso7816CertificateBody(DERApplicationSpecific appSpe)
-        throws IOException
-    {
+    private void setIso7816CertificateBody(DERApplicationSpecific appSpe) throws IOException {
         byte[] content;
         if (appSpe.getApplicationTag() == EACTags.CERTIFICATE_CONTENT_TEMPLATE)
         {
@@ -76,8 +74,7 @@ public class CertificateBody  extends ASN1Object
         }
         ASN1InputStream aIS = new ASN1InputStream(content);
         ASN1Primitive obj;
-        while ((obj = aIS.readObject()) != null)
-        {
+        while ((obj = aIS.readObject()) != null) {
             DERApplicationSpecific aSpe;
 
             if (obj instanceof DERApplicationSpecific)
@@ -86,7 +83,8 @@ public class CertificateBody  extends ASN1Object
             }
             else
             {
-                throw new IOException("Not a valid iso7816 content : not a DERApplicationSpecific Object :" + EACTags.encodeTag(appSpe) + obj.getClass());
+            	aIS.close();
+                throw new IOException("Not a valid iso7816 content : not a DERApplicationSpecific Object :" + EACTags.encodeTag(appSpe) + obj.getClass());           
             }
             switch (aSpe.getApplicationTag())
             {
@@ -116,6 +114,7 @@ public class CertificateBody  extends ASN1Object
                 throw new IOException("Not a valid iso7816 DERApplicationSpecific tag " + aSpe.getApplicationTag());
             }
         }
+        aIS.close();
     }
 
     /**

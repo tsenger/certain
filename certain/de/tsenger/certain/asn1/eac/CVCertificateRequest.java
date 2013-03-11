@@ -24,11 +24,6 @@ public class CVCertificateRequest extends ASN1Object
     private byte[] innerSignature = null;
     private byte[] outerSignature = null;
 
-    private int valid;
-
-    private static int bodyValid = 0x01;
-    private static int signValid = 0x02;
-
     private CVCertificateRequest(DERApplicationSpecific request)  throws IOException
     {
 //        if (request.getApplicationTag() == EACTags.AUTHENTIFICATION_DATA)
@@ -54,18 +49,16 @@ public class CVCertificateRequest extends ASN1Object
         if (request.getApplicationTag() == EACTags.CARDHOLDER_CERTIFICATE)
         {
             ASN1Sequence seq = ASN1Sequence.getInstance(request.getObject(BERTags.SEQUENCE));
-            for (Enumeration en = seq.getObjects(); en.hasMoreElements();)
+            for (Enumeration<?> en = seq.getObjects(); en.hasMoreElements();)
             {
                 DERApplicationSpecific obj = DERApplicationSpecific.getInstance(en.nextElement());
                 switch (obj.getApplicationTag())
                 {
                 case EACTags.CERTIFICATE_CONTENT_TEMPLATE:
                     certificateBody = CertificateBody.getInstance(obj);
-                    valid |= bodyValid;
                     break;
                 case EACTags.STATIC_INTERNAL_AUTHENTIFICATION_ONE_STEP:
                     innerSignature = obj.getContents();
-                    valid |= signValid;
                     break;
                 default:
                     throw new IOException("Invalid tag, not an CV Certificate Request element:" + obj.getApplicationTag());

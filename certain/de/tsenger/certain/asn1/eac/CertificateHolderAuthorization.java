@@ -39,8 +39,8 @@ public class CertificateHolderAuthorization
     public static final ASN1ObjectIdentifier id_AT = EACObjectIdentifiers.bsi_de.branch("3.1.2.2");
     public static final ASN1ObjectIdentifier id_ST = EACObjectIdentifiers.bsi_de.branch("3.1.2.3");
     public static final int CVCA = 0xC0;
-    public static final int DV_DOMESTIC = 0x80;
-    public static final int DV_FOREIGN = 0x40;
+    public static final int DV_OFFICIAL_DOMESTIC = 0x80;
+    public static final int DV_NON_OFFICIAL_FOREIGN = 0x40;
     public static final int TERMINAL = 0;
     
     public static final byte IS_RADG4 = 0x02;//Read Access to DG4 (Iris)
@@ -93,8 +93,8 @@ public class CertificateHolderAuthorization
     static
     {
         AuthorizationRole.put(Integers.valueOf(CVCA), "CVCA");
-        AuthorizationRole.put(Integers.valueOf(DV_DOMESTIC), "DV_DOMESTIC");
-        AuthorizationRole.put(Integers.valueOf(DV_FOREIGN), "DV_FOREIGN");
+        AuthorizationRole.put(Integers.valueOf(DV_OFFICIAL_DOMESTIC), "DV_OFFICIAL_DOMESTIC");
+        AuthorizationRole.put(Integers.valueOf(DV_NON_OFFICIAL_FOREIGN), "DV_NON-OFFICIAL_FOREIGN");
         AuthorizationRole.put(Integers.valueOf(TERMINAL), "TERMINAL");
 
     }

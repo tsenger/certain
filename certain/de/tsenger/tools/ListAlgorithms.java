@@ -8,14 +8,14 @@ import java.util.Iterator;
 import java.util.Set;
 
 public class ListAlgorithms {
-  public static void printSet(String setName, Set algorithms) {
+  public static void printSet(String setName, Set<String> algorithms) {
     System.out.println(setName + ":");
     if (algorithms.isEmpty()) {
       System.out.println("            None available.");
     } else {
-      Iterator it = algorithms.iterator();
+      Iterator<String> it = algorithms.iterator();
       while (it.hasNext()) {
-        String name = (String) it.next();
+        String name = it.next();
 
         System.out.println("            " + name);
       }
@@ -36,7 +36,7 @@ public class ListAlgorithms {
     Set<String> keyGenerator = new HashSet<String>();
 
     for (int i = 0; i != providers.length; i++) {
-      Iterator it = providers[i].keySet().iterator();
+      Iterator<?> it = providers[i].keySet().iterator();
 
       while (it.hasNext()) {
         String entry = (String) it.next();

@@ -41,25 +41,34 @@ public class CertainParser {
 	private String authorizationStr;
 	private String effdateStr;
 	private String expdateStr;
+
 	
-	private CertStorage certStorage;
-	
-	public CertainParser(CertStorage certStore) {
-		this.certStorage = certStore;
-	}
-	
-	public CertainParser(CertificateBody body, boolean isCertificate){
+	public void setBody(CertificateBody body, boolean isCertificate){
+		clearAll();
 		this.body = body;
 		this.isCertificate = isCertificate;
 		parse();
 	}
 	
-	public String parse(String chr) {
-		this.body = certStorage.getCertByCHR(chr).getBody();
-		this.isCertificate = true;
-		parse();
-		return getString();
-		
+	private void clearAll() {
+		profileId = null;
+		car = null;
+		pubKey = null;
+		pubKeyOid = null;
+		chr = null;
+		chat = null;
+		effdate = null;
+		expdate = null;
+		profileIdStr = null;
+		carStr = null;
+		pubKeyStr = null;		
+		chrStr = null;
+		terminalType = null;
+		certRole = null;
+		authorizationBitStr = null;
+		authorizationStr = null;
+		effdateStr = null;
+		expdateStr = null;		
 	}
 	
 	private void parse()  {
@@ -201,7 +210,7 @@ public class CertainParser {
 		return sw.toString();
 	}
 	
-	public String getString() {		
+	public String getContentString() {		
 		StringWriter sw = new StringWriter();
 		sw.write("CAR: ");
 		sw.write(getCarString()+"\n");
@@ -209,7 +218,7 @@ public class CertainParser {
 		sw.write(getChrString()+"\n\n");
 				
 		sw.write("Public Key\n");
-		sw.write(getPublicKeyString()+"\n");
+		sw.write(getPublicKeyString()+"\n\n");
 
 
 		if (isCertificate) {

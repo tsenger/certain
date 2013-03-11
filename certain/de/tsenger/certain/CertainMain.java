@@ -35,14 +35,11 @@ public class CertainMain {
 	@Option(name ="-linkcert", usage = "link certificate to for new CVCA", metaVar = "<file>")
 	private File linkCertFile;
 	
-	private CVCertificate linkCert;
-	
-	private CVCertificateRequest dvReq = null;
-	
-	private CertainParser cvParser = null;
-	
 	private CertStorage certStore = null;
-
+	private CVCertificateRequest dvReq = null;
+	private CVCertificate linkCert = null;	
+		
+	private CertainParser cvParser = null;
 	private CertainVerifier verifier;
 
 
@@ -70,123 +67,168 @@ public class CertainMain {
 
 	public void run() {
 		
-		readFilesToCVC();
-		cvParser = new CertainParser(certStore);
+		readFilesAndGetCVInstances();
+		cvParser = new CertainParser();
 		
 		/** CV-Certifikates from certStore **/
 		if (!certStore.isEmpty()) {
-			for (Iterator<String> i = certStore.getKeys().iterator(); i.hasNext();) {	
-				
-				String chrStr = i.next();				
-				CVCertificate cert = certStore.getCertByCHR(chrStr);
-				
-				printBanner(chrStr, true);
-				
-				int role = cert.getHolderAuthorizationRole()&0xC0;
-				if (role==CertificateHolderAuthorization.CVCA) {
-					//TODO this is a CVCA, is there anything to do?
-				}
-				if (role==CertificateHolderAuthorization.DV_DOMESTIC||role==CertificateHolderAuthorization.DV_FOREIGN) {
-					//TODO this is a DV, is there anything to do?
-				}
-				
-				
-				System.out.println(cvParser.parse(chrStr));
-				printSignatureVerification(cert);
-				printBanner(chrStr, false);
-			}
+			checkCerts();
 		}
 		
 		
 		/** CV-Request **/
 		if (dvReq!=null) {
-			CertainParser reqParser = new CertainParser(dvReq.getCertificateBody(), false);
-			
-			printBanner("Request for "+dvReq.getCertificateBody().getChrString(), true);
-			System.out.println(reqParser.getString());
-			
-			// Check if Domain Parameters are the same as in the CVCA
-			if (certFiles!=null&&!certFiles.isEmpty()) {
-				String cvcaChrStr = getCvcaChr(dvReq.getCertificateBody().getCarString(), 3);
-				if (cvcaChrStr==null) {
-					System.out.println("Can't find a matching parent CVCA certifcate to this request.");
-				}
-				if (!equalDomainParameters(certStore.getCertByCHR(cvcaChrStr).getBody().getPublicKey(), dvReq.getCertificateBody().getPublicKey())) {
-					System.out.println("Domain parameters of this request don't match domain parameters of any provided CVCA certificate.");
-				}
-			}
-			
-			//verify inner signature
-			try {
-				verifier = new CertainVerifier(dvReq.getCertificateBody().getPublicKey());
-				System.out.println("Inner Signature is " + (verifier.hasValidSignature(dvReq) ? "VALID" : "!!! INVALID !!!"));
-			} catch (Exception e) {
-				System.out.println("Verfifier throws exception: " + e.getLocalizedMessage());
-			}	
-			
-			if (dvReq.hasOuterSignature()) {
-				String outerCarString = dvReq.getOuterCarStr();
-				System.out.println("\nOuter CAR:"+outerCarString);
-				
-				CVCertificate outerCarCert = certStore.getCertByCHR(outerCarString);
-								
-				if (outerCarCert!=null) {
-					// If outer CAR is a DV cert get the matching CVCA cert
-					int parentCertRole = outerCarCert.getHolderAuthorizationRole()&0xC0;
-					if (parentCertRole==CertificateHolderAuthorization.DV_DOMESTIC||parentCertRole==CertificateHolderAuthorization.DV_FOREIGN) {
-						String cvcaChrString = getCvcaChr(outerCarString,3);
-						CVCertificate cvcaCert = certStore.getCertByCHR(cvcaChrString);
-						
-						if (cvcaCert!=null) {
-							try {
-								verifier = new CertainVerifier(cvcaCert.getBody().getPublicKey(),outerCarCert.getBody().getPublicKey());
-								System.out.println("Outer Signature is " + (verifier.hasValidOuterSignature(dvReq) ? "VALID" : "!!! INVALID !!!"));
-							} catch (Exception e) {
-								System.out.println("Verfifier throws exception: " + e.getLocalizedMessage());
-							}
-						} else {
-							System.out.println("Can't check outer signature without matching DV and CVCA certifcate.");
-						}
-						
-					} else if (parentCertRole==CertificateHolderAuthorization.CVCA) { // Outer Car is CVCA cert  
-						try {
-							verifier = new CertainVerifier(outerCarCert.getBody().getPublicKey());
-							System.out.println("Outer Signature is " + (verifier.hasValidOuterSignature(dvReq) ? "VALID" : "!!! INVALID !!!"));
-						} catch (Exception e) {
-							System.out.println("Verfifier throws exception: " + e.getLocalizedMessage());
-						}
-					}
-					
-				} else {
-					System.out.println("Can't check outer signature without matching parent DV and/or CVCA certifcate.");
-				}
-			}
-			printBanner("Request for "+dvReq.getCertificateBody().getChrString(), false);
+			checkDvRequest();
 		}
 		
 		
 		/** Link Certificate **/
 		if (linkCert!=null) {	
-			printBanner("Link "+linkCert.getCarString()+" -> "+linkCert.getChrString(), true);
-			
-			CertainParser linkParser = new CertainParser(linkCert.getBody(), true);				
-			System.out.println(linkParser.getString());
-			
-			//verify signature
-			CVCertificate cvca = certStore.getCertByCHR(linkCert.getCarString());
-			try {
-				verifier = new CertainVerifier(cvca.getBody().getPublicKey());
-				System.out.println("Signature is " + (verifier.hasValidSignature(linkCert) ? "VALID" : "!!! INVALID !!!"));
-			} catch (Exception e) {
-				System.out.println("Verfifier throws exception: " + e.getLocalizedMessage());
-			}	
-			
-			printBanner("Link "+linkCert.getCarString()+" -> "+linkCert.getChrString(), false);
+			checkLinkCert();
 		}
 
 	}
 	
-	private void printSignatureVerification(CVCertificate cert) {
+	/**
+	 * Read the files which are set via the command line arguments and set the CVCerticate / CVCertificateRequest instances.
+	 */
+	private void readFilesAndGetCVInstances() {
+		byte[] tempCvcBytes;
+		certStore = new CertStorage();
+		
+		if ((certFiles!=null)&&(!certFiles.isEmpty())) {		
+			for (Iterator<File> i = certFiles.iterator(); i.hasNext();) {	
+				File cvcaCertFile = i.next();
+				tempCvcBytes = readFile(cvcaCertFile);	
+				certStore.putCert(CVCertificate.getInstance(tempCvcBytes));
+			}
+		}
+		
+		if (dvReqFile!=null) {
+			tempCvcBytes = readFile(dvReqFile);
+			dvReq = CVCertificateRequest.getInstance(tempCvcBytes);
+		}
+		
+		if (linkCertFile!=null) {
+			tempCvcBytes = readFile(linkCertFile);
+			linkCert = CVCertificate.getInstance(tempCvcBytes);
+		}
+		
+	}
+	
+	/**
+	 * Check all CVCA and DV certificates which are stored in the certStore
+	 */
+	private void checkCerts() {
+		for (Iterator<String> i = certStore.getKeys().iterator(); i.hasNext();) {	
+			
+			String chrStr = i.next();				
+			CVCertificate cert = certStore.getCertByCHR(chrStr);
+			
+			printBanner(chrStr);
+			
+			int role = cert.getHolderAuthorizationRole()&0xC0;
+			if (role==CertificateHolderAuthorization.CVCA) {
+				//TODO this is a CVCA, is there anything to do?
+			}
+			if (role==CertificateHolderAuthorization.DV_OFFICIAL_DOMESTIC||role==CertificateHolderAuthorization.DV_NON_OFFICIAL_FOREIGN) {
+				//TODO this is a DV, is there anything to do?
+			}
+			
+			cvParser.setBody(cert.getBody(), true);
+			System.out.println(cvParser.getContentString());
+			verifySignatureAndPrintResult(cert);
+		}
+	}
+
+	/**
+	 * Check the DV request
+	 */
+	private void checkDvRequest() {
+		cvParser.setBody(dvReq.getCertificateBody(), false);
+		
+		printBanner("Request for "+dvReq.getCertificateBody().getChrString());
+		System.out.println(cvParser.getContentString());
+		
+		// Check if Domain Parameters are the same as in the CVCA
+		if (certFiles!=null&&!certFiles.isEmpty()) {
+			String cvcaChrStr = getCvcaChr(dvReq.getCertificateBody().getCarString(), 3);
+			if (cvcaChrStr==null) {
+				System.out.println("Can't find a matching parent CVCA certifcate to this request.");
+			}
+			if (!equalDomainParameters(certStore.getCertByCHR(cvcaChrStr).getBody().getPublicKey(), dvReq.getCertificateBody().getPublicKey())) {
+				System.out.println("Domain parameters of this request don't match domain parameters of any provided CVCA certificate.");
+			}
+		}
+		
+		//verify inner signature
+		try {
+			verifier = new CertainVerifier(dvReq.getCertificateBody().getPublicKey());
+			System.out.println("Inner Signature is " + (verifier.hasValidSignature(dvReq) ? "VALID" : "!!! INVALID !!!"));
+		} catch (Exception e) {
+			System.out.println("Verfifier throws exception: " + e.getLocalizedMessage());
+		}	
+		
+		if (dvReq.hasOuterSignature()) {
+			String outerCarString = dvReq.getOuterCarStr();
+			System.out.println("\nOuter CAR:"+outerCarString);
+			
+			CVCertificate outerCarCert = certStore.getCertByCHR(outerCarString);
+							
+			if (outerCarCert!=null) {
+				// If outer CAR is a DV cert get the matching CVCA cert
+				int parentCertRole = outerCarCert.getHolderAuthorizationRole()&0xC0;
+				if (parentCertRole==CertificateHolderAuthorization.DV_OFFICIAL_DOMESTIC||parentCertRole==CertificateHolderAuthorization.DV_NON_OFFICIAL_FOREIGN) {
+					String cvcaChrString = getCvcaChr(outerCarString,3);
+					CVCertificate cvcaCert = certStore.getCertByCHR(cvcaChrString);
+					
+					if (cvcaCert!=null) {
+						try {
+							verifier = new CertainVerifier(cvcaCert.getBody().getPublicKey(),outerCarCert.getBody().getPublicKey());
+							System.out.println("Outer Signature is " + (verifier.hasValidOuterSignature(dvReq) ? "VALID" : "!!! INVALID !!!"));
+						} catch (Exception e) {
+							System.out.println("Verfifier throws exception: " + e.getLocalizedMessage());
+						}
+					} else {
+						System.out.println("Can't check outer signature without matching DV and CVCA certifcate.");
+					}
+					
+				} else if (parentCertRole==CertificateHolderAuthorization.CVCA) { // Outer Car is CVCA cert  
+					try {
+						verifier = new CertainVerifier(outerCarCert.getBody().getPublicKey());
+						System.out.println("Outer Signature is " + (verifier.hasValidOuterSignature(dvReq) ? "VALID" : "!!! INVALID !!!"));
+					} catch (Exception e) {
+						System.out.println("Verfifier throws exception: " + e.getLocalizedMessage());
+					}
+				}
+				
+			} else {
+				System.out.println("Can't check outer signature without matching parent DV and/or CVCA certifcate.");
+			}
+		}
+	}
+	
+	/**
+	 * Check the Link certificate
+	 */
+	private void checkLinkCert() {
+		printBanner("Link "+linkCert.getCarString()+" -> "+linkCert.getChrString());
+		
+		cvParser.setBody(linkCert.getBody(), true);				
+		System.out.println(cvParser.getContentString());
+		
+		//verify signature
+		CVCertificate cvca = certStore.getCertByCHR(linkCert.getCarString());
+		try {
+			verifier = new CertainVerifier(cvca.getBody().getPublicKey());
+			System.out.println("Signature is " + (verifier.hasValidSignature(linkCert) ? "VALID" : "!!! INVALID !!!"));
+		} catch (Exception e) {
+			System.out.println("Verfifier throws exception: " + e.getLocalizedMessage());
+		}	
+	}
+
+	
+	private void verifySignatureAndPrintResult(CVCertificate cert) {
 		
 		String cvcaChrStr = getCvcaChr(cert.getCarString(),3);
 		CVCertificate cvcaCert = certStore.getCertByCHR(cvcaChrStr);
@@ -219,11 +261,9 @@ public class CertainMain {
 	}
 
 	
-	private void printBanner(String name, boolean start) {
-		System.out.println("---------------------------------------------------");
-		if (start) System.out.print("Start ");
-		else System.out.print("End ");
-		System.out.println("parsing " + name);
+	private void printBanner(String name) {
+		System.out.println("\n\n---------------------------------------------------");
+		System.out.println("Parsing " + name);
 		System.out.println("---------------------------------------------------");
 	}
 	
@@ -246,32 +286,9 @@ public class CertainMain {
 			return true;
 		}
 		return false;
-	}
-
-	
-	private void readFilesToCVC() {
-		byte[] tempCvcBytes;
-		certStore = new CertStorage();
-		
-		if ((certFiles!=null)&&(!certFiles.isEmpty())) {		
-			for (Iterator<File> i = certFiles.iterator(); i.hasNext();) {	
-				File cvcaCertFile = i.next();
-				tempCvcBytes = readFile(cvcaCertFile);	
-				certStore.storeCert(CVCertificate.getInstance(tempCvcBytes));
-			}
-		}
-		
-		if (dvReqFile!=null) {
-			tempCvcBytes = readFile(dvReqFile);
-			dvReq = CVCertificateRequest.getInstance(tempCvcBytes);
-		}
-		
-		if (linkCertFile!=null) {
-			tempCvcBytes = readFile(linkCertFile);
-			linkCert = CVCertificate.getInstance(tempCvcBytes);
-		}
-		
 	}	
+	
+	
 
 	/**
 	 * Get the content of the given file as byte-Array

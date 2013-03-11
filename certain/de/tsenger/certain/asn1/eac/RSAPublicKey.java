@@ -35,7 +35,7 @@ public class RSAPublicKey
 
     RSAPublicKey(ASN1Sequence seq)
     {
-        Enumeration en = seq.getObjects();
+        Enumeration<?> en = seq.getObjects();
 
         this.usage = ASN1ObjectIdentifier.getInstance(en.nextElement());
 

@@ -73,9 +73,11 @@ public class CVCertificate  extends ASN1Object
                 }
                 else
                 {
+                	content.close();
                     throw new IOException("Invalid Object, not an Iso7816CertificateStructure");
                 }
             }
+            content.close();
         }
         else
         {

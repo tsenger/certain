@@ -48,10 +48,10 @@ public class Flags
      }
      */
 
-    String decode(Hashtable decodeMap)
+    String decode(Hashtable<?, ?> decodeMap)
     {
         StringJoiner joiner = new StringJoiner(" ");
-        Enumeration e = decodeMap.keys();
+        Enumeration<?> e = decodeMap.keys();
         while (e.hasMoreElements())
         {
             Integer i = (Integer)e.nextElement();

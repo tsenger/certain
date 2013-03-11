@@ -49,7 +49,7 @@ public class ECDSAPublicKey extends PublicKeyDataObject {
 	private static final int F = 0x40;
 
 	ECDSAPublicKey(ASN1Sequence seq) throws IllegalArgumentException {
-		Enumeration en = seq.getObjects();
+		Enumeration<?> en = seq.getObjects();
 
 		this.usage = ASN1ObjectIdentifier.getInstance(en.nextElement());
 
