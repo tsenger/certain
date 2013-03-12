@@ -9,10 +9,6 @@ import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.DERApplicationSpecific;
-import org.bouncycastle.asn1.eac.BidirectionalMap;
-import org.bouncycastle.asn1.eac.EACObjectIdentifiers;
-import org.bouncycastle.asn1.eac.EACTags;
-import org.bouncycastle.util.Integers;
 
 import de.tsenger.tools.Converter;
 
@@ -92,10 +88,10 @@ public class CertificateHolderAuthorization
     static BidirectionalMap AuthorizationRole = new BidirectionalMap();
     static
     {
-        AuthorizationRole.put(Integers.valueOf(CVCA), "CVCA");
-        AuthorizationRole.put(Integers.valueOf(DV_OFFICIAL_DOMESTIC), "DV_OFFICIAL_DOMESTIC");
-        AuthorizationRole.put(Integers.valueOf(DV_NON_OFFICIAL_FOREIGN), "DV_NON-OFFICIAL_FOREIGN");
-        AuthorizationRole.put(Integers.valueOf(TERMINAL), "TERMINAL");
+        AuthorizationRole.put(Integer.valueOf(CVCA), "CVCA");
+        AuthorizationRole.put(Integer.valueOf(DV_OFFICIAL_DOMESTIC), "DV_OFFICIAL_DOMESTIC");
+        AuthorizationRole.put(Integer.valueOf(DV_NON_OFFICIAL_FOREIGN), "DV_NON-OFFICIAL_FOREIGN");
+        AuthorizationRole.put(Integer.valueOf(TERMINAL), "TERMINAL");
 
     }
     
@@ -110,7 +106,7 @@ public class CertificateHolderAuthorization
 
     public static String GetRoleDescription(int i)
     {
-        return (String)AuthorizationRole.get(Integers.valueOf(i));
+        return (String)AuthorizationRole.get(Integer.valueOf(i));
     }
 
     public static int GetFlag(String description)

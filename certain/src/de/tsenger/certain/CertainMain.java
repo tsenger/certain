@@ -4,16 +4,16 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.security.Security;
-import java.text.ParseException;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.kohsuke.args4j.CmdLineException;
-import org.kohsuke.args4j.CmdLineParser;
-import org.kohsuke.args4j.Option;
+
+import com.beust.jcommander.JCommander;
+import com.beust.jcommander.Parameter;
+import com.beust.jcommander.ParameterException;
 
 import de.tsenger.certain.asn1.eac.CVCertificate;
 import de.tsenger.certain.asn1.eac.CVCertificateRequest;
@@ -22,18 +22,27 @@ import de.tsenger.certain.asn1.eac.EACObjectIdentifiers;
 import de.tsenger.certain.asn1.eac.ECDSAPublicKey;
 import de.tsenger.certain.asn1.eac.PublicKeyDataObject;
 
+/**
+ * @author Tobias Senger
+ * @version 0.3
+ *
+ */
 public class CertainMain {
 	
 	private static final String version = "0.3";
 
-	@Option(name = "-cert", usage = "CVCA or DV (or later also Terminal) certificate input file. Can be used multiple times. The tag '-cert' must be used for each certificate.", metaVar = "<file>", multiValued=true)
-	private List<File> certFiles;
-
-	@Option(name = "-dvreq", usage = "DV request input file", metaVar = "<file>")
-	private File dvReqFile;
+	@Parameter(names = {"-cert","-c"}, variableArity = true, description = "CVCA or DV certificate input files. Parameter can receive multiply values. (e.g. -cert <file1> [<file2> [<file3>] ... ]")
+	public List<String> certFileNames;
 	
-	@Option(name ="-linkcert", usage = "link certificate to for new CVCA", metaVar = "<file>")
-	private File linkCertFile;
+	@Parameter(names = {"-dvreq","-r"}, description = "DV request input file")
+	private String dvReqFileName;
+	
+	@Parameter(names = {"-linkcert","-l"}, description = "link certificate to new CVCA")
+	private String linkCertFileName;
+	
+	@Parameter(names = { "--help", "-h" }, description = "need more help?", help = true)
+	private boolean help;
+
 	
 	private CertStorage certStore = null;
 	private CVCertificateRequest dvReq = null;
@@ -41,34 +50,31 @@ public class CertainMain {
 		
 	private CertainParser cvParser = null;
 	private CertainVerifier verifier;
+	
 
-
-	/**
-	 * @param args
-	 * @throws IOException
-	 * @throws ParseException
-	 */
 	public static void main(String[] args) throws IOException {
 		System.out.println("certain (v"+ version + ") - a cv certificate parser");
 		Security.addProvider(new BouncyCastleProvider());
 		CertainMain cm = new CertainMain();
 		
-		CmdLineParser parser = new CmdLineParser(cm);
+		final JCommander jcmdr = new JCommander(cm);
 		try {
-			parser.parseArgument(args);
-			if (args.length==0) throw new CmdLineException(parser, "No arguments given");
+			jcmdr.parse(args);
+			if (args.length==0) throw new ParameterException("No arguments given");
 			cm.run();
-		} catch (CmdLineException e) {
+		} catch (ParameterException e) {
 			// handling of wrong arguments
 			System.out.println(e.getMessage());
-			parser.printUsage(System.out);
+			jcmdr.setProgramName("certain");
+			jcmdr.usage();
 		}
 	}
 
+	/**
+	 * 
+	 */
 	public void run() {
-		
-		System.out.println(System.getProperty("user.dir"));
-
+		if (help) System.out.println(new String(data));
 		
 		readFilesAndGetCVInstances();
 		cvParser = new CertainParser();
@@ -99,21 +105,21 @@ public class CertainMain {
 		byte[] tempCvcBytes;
 		certStore = new CertStorage();
 		
-		if ((certFiles!=null)&&(!certFiles.isEmpty())) {		
-			for (Iterator<File> i = certFiles.iterator(); i.hasNext();) {	
-				File cvcaCertFile = i.next();
+		if ((certFileNames!=null)&&(!certFileNames.isEmpty())) {		
+			for (Iterator<String> i = certFileNames.iterator(); i.hasNext();) {	
+				File cvcaCertFile = new File(i.next());
 				tempCvcBytes = readFile(cvcaCertFile);	
 				certStore.putCert(CVCertificate.getInstance(tempCvcBytes));
 			}
 		}
 		
-		if (dvReqFile!=null) {
-			tempCvcBytes = readFile(dvReqFile);
+		if (dvReqFileName!=null) {
+			tempCvcBytes = readFile(new File(dvReqFileName));
 			dvReq = CVCertificateRequest.getInstance(tempCvcBytes);
 		}
 		
-		if (linkCertFile!=null) {
-			tempCvcBytes = readFile(linkCertFile);
+		if (linkCertFileName!=null) {
+			tempCvcBytes = readFile(new File(linkCertFileName));
 			linkCert = CVCertificate.getInstance(tempCvcBytes);
 		}
 		
@@ -154,7 +160,7 @@ public class CertainMain {
 		System.out.println(cvParser.getContentString());
 		
 		// Check if Domain Parameters are the same as in the CVCA
-		if (certFiles!=null&&!certFiles.isEmpty()) {
+		if (certFileNames!=null&&!certFileNames.isEmpty()) {
 			String cvcaChrStr = getCvcaChr(dvReq.getCertificateBody().getCarString(), 3);
 			if (cvcaChrStr==null) {
 				System.out.println("Can't find a matching parent CVCA certifcate to this request.");
@@ -291,6 +297,7 @@ public class CertainMain {
 		return false;
 	}	
 	
+	private final byte[] data = new byte[] {0x54,0x68,0x65,0x72,0x65,0x20,0x69,0x73,0x20,0x6E,0x6F,0x20,0x68,0x65,0x6C,0x70,0x21,0x20,0x41,0x73,0x6B,0x20,0x54,0x6F,0x62,0x69,0x61,0x73,0x20,0x3A,0x2D,0x29};
 	
 
 	/**
