@@ -98,9 +98,9 @@ public class CertificateHolderAuthorization
     static BidirectionalMap TerminalType = new BidirectionalMap();
     static
     {
-    	TerminalType.put(id_IS, "Inspection System");
-    	TerminalType.put(id_AT, "Authentication Terminal");
-    	TerminalType.put(id_ST, "Signature Terminal");
+    	TerminalType.put(id_IS, "Inspection System (IS)");
+    	TerminalType.put(id_AT, "Authentication Terminal (AT)");
+    	TerminalType.put(id_ST, "Signature Terminal (ST)");
 
     }
 

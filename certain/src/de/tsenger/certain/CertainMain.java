@@ -315,7 +315,7 @@ public class CertainMain {
 			in.read(buffer, 0, buffer.length);
 			in.close();
 		} catch (IOException e) {
-			System.err.println("Erro while open file "+binFile.getName()+": "+e.getMessage());
+			System.err.println("Error while open file "+binFile.getName()+": "+e.getMessage());
 			return null;
 		}
 

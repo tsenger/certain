@@ -134,7 +134,7 @@ public class CertainVerifier {
 
 				return factk.generatePublic(pubKeySpec);
 			} catch (NoSuchAlgorithmException e) {
-				throw new EACException("cannot find algorithm ECDSA: " + e.getMessage(), e);
+				throw new EACException("cannot find algorithm RSA: " + e.getMessage(), e);
 			}
 		}
 	}
