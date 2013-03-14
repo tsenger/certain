@@ -9,6 +9,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.ASN1ParsingException;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import com.beust.jcommander.JCommander;
@@ -103,24 +104,38 @@ public class CertainMain {
 	 */
 	private void readFilesAndGetCVInstances() {
 		byte[] tempCvcBytes;
+		CVCertificate tmpCvCert;
 		certStore = new CertStorage();
 		
 		if ((certFileNames!=null)&&(!certFileNames.isEmpty())) {		
 			for (Iterator<String> i = certFileNames.iterator(); i.hasNext();) {	
 				File cvcaCertFile = new File(i.next());
 				tempCvcBytes = readFile(cvcaCertFile);	
-				certStore.putCert(CVCertificate.getInstance(tempCvcBytes));
+				try {
+					tmpCvCert = CVCertificate.getInstance(tempCvcBytes);
+					certStore.putCert(tmpCvCert);
+				} catch (ASN1ParsingException e) {
+					System.out.println(e.getLocalizedMessage());				
+				}				
 			}
 		}
 		
 		if (dvReqFileName!=null) {
 			tempCvcBytes = readFile(new File(dvReqFileName));
-			dvReq = CVCertificateRequest.getInstance(tempCvcBytes);
+			try {
+				dvReq = CVCertificateRequest.getInstance(tempCvcBytes);
+			} catch (ASN1ParsingException e) {
+				System.out.println(e.getLocalizedMessage());				
+			}
 		}
 		
 		if (linkCertFileName!=null) {
 			tempCvcBytes = readFile(new File(linkCertFileName));
-			linkCert = CVCertificate.getInstance(tempCvcBytes);
+			try {
+				linkCert = CVCertificate.getInstance(tempCvcBytes);
+			} catch (ASN1ParsingException e) {
+				System.out.println(e.getLocalizedMessage());				
+			}
 		}
 		
 	}
