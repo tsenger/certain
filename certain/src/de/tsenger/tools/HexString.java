@@ -31,17 +31,27 @@ public class HexString {
 	}
 
 	public static String bufferToHex(byte buffer[]) {
-		return HexString.bufferToHex(buffer, 0, buffer.length);
+		return HexString.bufferToHex(buffer, 0, buffer.length, false);
+	}
+	
+	public static String bufferToHex(byte buffer[], boolean wrapLines) {
+		return HexString.bufferToHex(buffer, 0, buffer.length, wrapLines);
+	}
+	
+	public static String bufferToHex(byte buffer[], int startOffset, int length) {
+		return HexString.bufferToHex(buffer, startOffset, length, false);
 	}
 
-	public static String bufferToHex(byte buffer[], int startOffset, int length) {
+	public static String bufferToHex(byte buffer[], int startOffset, int length, boolean wrapLines) {
 		StringBuffer hexString = new StringBuffer(2 * length);
 		int endOffset = startOffset + length;
 		for (int i = startOffset; i < endOffset; i++) {
 			HexString.appendHexPair(buffer[i], hexString);
-//			hexString.append(" ");
-//			if ((i + 1) % 16 == 0)
-//				hexString.append("\n");
+			if (wrapLines) {
+				hexString.append(" ");
+				if (((i + 1) % 16 == 0)&&(i+1!=endOffset))
+					hexString.append("\n");
+			}
 		}
 		return hexString.toString();
 	}

@@ -98,14 +98,17 @@ public class Converter {
 	 * @return Byte-Array ohne führendes 0-Byte
 	 */
 	public static byte[] bigIntToByteArray(BigInteger bi) {
-		byte[] temp = bi.toByteArray();
+		return cutLeadingZero(bi.toByteArray());
+	}
+	
+	public static byte[] cutLeadingZero(byte[] array) {
 		byte[] returnbytes = null;
-		if (temp[0] == 0) {
-			returnbytes = new byte[temp.length - 1];
-			System.arraycopy(temp, 1, returnbytes, 0, returnbytes.length);
+		if (array[0] == 0) {
+			returnbytes = new byte[array.length - 1];
+			System.arraycopy(array, 1, returnbytes, 0, returnbytes.length);
 			return returnbytes;
 		} else
-			return temp;
+			return array;
 	}
 
 	/**

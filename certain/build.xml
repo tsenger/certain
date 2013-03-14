@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-    <project name="Certain" basedir="." default="jar">
+    <project name="certain" basedir="." default="jar">
     <property name="source.dir"     value="src"/>
     <property name="class.dir"      value="bin"/>
     <property name="jar.dir"        value="dist"/>

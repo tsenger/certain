@@ -48,8 +48,8 @@ public class CertainParser {
 		clearAll();
 		this.body = body;
 		this.isCertificate = isCertificate;
-		parse();
 	}
+
 	
 	private void clearAll() {
 		profileId = null;
@@ -80,10 +80,10 @@ public class CertainParser {
 		}
 		
 		profileId = body.getCertificateProfileIdentifier().getContents();
-		String errorText = "";
-		if (profileId.length>1) errorText = " -> Length of Profile Identifier is bigger den 1!";
-		if (profileId[0]!=0)  errorText = " ->  Profile Identifier value is not 0!";
-		profileIdStr = "0"+errorText;
+
+		if (showDetails) profileIdStr = HexString.bufferToHex(profileId);
+		if (profileId.length>1) profileIdStr += " -> Length of Profile Identifier is bigger den 1!";
+		if (profileId[0]!=0)  profileIdStr += " ->  Profile Identifier value is not 0!";
 		
 		car = body.getCertificationAuthorityReference();
 		if (isCertificate&&car==null) carStr = " -> Certification authority reference is not set";
@@ -99,24 +99,34 @@ public class CertainParser {
 			ECDSAPublicKey pk = (ECDSAPublicKey) pubKey;
 			if ((certRole!=null&&certRole.equals("CVCA"))||!isCertificate) {
 				if (pk.hasDomainParameters()) { 
-					sw.write("0x81 Prime modulus p:       " + pk.getPrimeModulusP().toString(16)+"\n");
-					sw.write("0x82 First coefficient a:   " + pk.getFirstCoefA().toString(16)+"\n");
-					sw.write("0x83 Second coefficient b:  " + pk.getSecondCoefB().toString(16)+"\n");
-					sw.write("0x84 Base point G :         " + HexString.bufferToHex(pk.getBasePointG())+"\n");
-					sw.write("0x85 Order of base point r: " + pk.getOrderOfBasePointR().toString(16)+"\n");
-					sw.write("0x86 Public point Y:        " + HexString.bufferToHex(pk.getPublicPointY())+"\n");
-					sw.write("0x87 Cofactor f:            " + pk.getCofactorF().toString(16));
+					byte[] p = Converter.cutLeadingZero(pk.getPrimeModulusP().toByteArray());
+					byte[] a = Converter.cutLeadingZero(pk.getFirstCoefA().toByteArray());
+					byte[] b = Converter.cutLeadingZero(pk.getSecondCoefB().toByteArray());
+					byte[] g = pk.getBasePointG();
+					byte[] r = Converter.cutLeadingZero(pk.getOrderOfBasePointR().toByteArray());
+					byte[] y = pk.getPublicPointY();
+					byte[] f = Converter.cutLeadingZero(pk.getCofactorF().toByteArray());
+					sw.write("0x81 Prime modulus p:       " + (showDetails?"\n"+HexString.bufferToHex(p, true):HexString.bufferToHex(p, 0, 3)+"... ("+p.length+" Bytes)")+"\n");
+					sw.write("0x82 First coefficient a:   " + (showDetails?"\n"+HexString.bufferToHex(a, true):HexString.bufferToHex(a, 0, 3)+"... ("+a.length+" Bytes)")+"\n");
+					sw.write("0x83 Second coefficient b:  " + (showDetails?"\n"+HexString.bufferToHex(b, true):HexString.bufferToHex(b, 0 ,3)+"... ("+b.length+" Bytes)")+"\n");
+					sw.write("0x84 Base point G :         " + (showDetails?"\n"+HexString.bufferToHex(g, true):HexString.bufferToHex(g, 0 ,3)+"... ("+g.length+" Bytes)")+"\n");
+					sw.write("0x85 Order of base point r: " + (showDetails?"\n"+HexString.bufferToHex(r, true):HexString.bufferToHex(r, 0 ,3)+"... ("+r.length+" Bytes)")+"\n");
+					sw.write("0x86 Public point Y:        " + (showDetails?"\n"+HexString.bufferToHex(y, true):HexString.bufferToHex(y, 0 ,3)+"... ("+y.length+" Bytes)")+"\n");
+					sw.write("0x87 Cofactor f:            " + (showDetails?"\n"+HexString.bufferToHex(f, true):HexString.bufferToHex(f, 0, 1)+"... ("+f.length+" Bytes)"));
 				} else {
 					sw.write(" -> Domain Parameter are missing!");
 				}
 			} else {
-				sw.write("0x86 Public point Y : " + HexString.bufferToHex(pk.getPublicPointY()));
+				byte[] y = pk.getPublicPointY();
+				sw.write("0x86 Public point Y : " + (showDetails?HexString.bufferToHex(y):HexString.bufferToHex(y, 0 ,3)+"... ("+y.length+" Bytes)"));
 			}
 
 		} else if (pubKeyOid.on(EACObjectIdentifiers.id_TA_RSA)) {
 			RSAPublicKey pk = (RSAPublicKey) pubKey;
-			sw.write("Composite modulus: " + pk.getModulus().toString(16)+"\n");
-			sw.write("Public exponent:   " + pk.getPublicExponent().toString(16));
+			byte[] m = Converter.cutLeadingZero(pk.getModulus().toByteArray());
+			byte[] e = Converter.cutLeadingZero(pk.getPublicExponent().toByteArray());
+			sw.write("Composite modulus: " + (showDetails?"\n"+HexString.bufferToHex(m, true):HexString.bufferToHex(m, 0, 3)+"... ("+m.length+" Bytes)")+"\n");
+			sw.write("Public exponent:   " + (showDetails?"\n"+HexString.bufferToHex(e, true):HexString.bufferToHex(e, 0, 3)+"... ("+e.length+" Bytes)"));
 		} else {
 			sw.write(" -> Neither RSA nor ECDSA public key was found.");
 		}
@@ -164,7 +174,7 @@ public class CertainParser {
 		StringWriter sw = new StringWriter();
 				
 		if (chat.getOid().equals(CertificateHolderAuthorization.id_AT)) {		
-			sw.write("Read access to: "+
+			sw.write("Read access to "+
 					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG1)?"DG1 ":"")+
 					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG2)?"DG2 ":"")+
 					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG3)?"DG3 ":"")+
@@ -188,7 +198,7 @@ public class CertainParser {
 					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG21)?"DG21":"")+
 					"\n"
 			);
-			sw.write("Write access to: "+
+			sw.write("Write access to "+
 					(chat.hasAuth(CertificateHolderAuthorization.AT_WADG17)?"DG17 ":"")+
 					(chat.hasAuth(CertificateHolderAuthorization.AT_WADG18)?"DG18 ":"")+
 					(chat.hasAuth(CertificateHolderAuthorization.AT_WADG19)?"DG19 ":"")+
@@ -206,7 +216,7 @@ public class CertainParser {
 			sw.write(chat.hasAuth(CertificateHolderAuthorization.AT_AGEVRF)?"Age Verification\n":"");
 		} 
 		else if (chat.getOid().equals(CertificateHolderAuthorization.id_IS)) {
-			sw.write("Read access: " + (chat.hasAuth(CertificateHolderAuthorization.IS_RADG3)?"DG3 ":"")+
+			sw.write("Read access " + (chat.hasAuth(CertificateHolderAuthorization.IS_RADG3)?"DG3 ":"")+
 					(chat.hasAuth(CertificateHolderAuthorization.IS_RADG4)?"DG4":""));
 		} 
 		else if (chat.getOid().equals(CertificateHolderAuthorization.id_ST)) {
@@ -216,26 +226,31 @@ public class CertainParser {
 		return sw.toString();
 	}
 	
-	public String getContentString() {		
+	public String getContentString(boolean showDetails) {	
+		this.showDetails = showDetails;
+		parse();
+		
 		StringWriter sw = new StringWriter();
+		if (profileIdStr!=null) sw.write("Profile ID: "+profileIdStr+"\n\n");
+		
 		sw.write("CAR: ");
 		sw.write(getCarString()+"\n");
 		sw.write("CHR: ");
 		sw.write(getChrString()+"\n\n");
 				
 		sw.write("Public Key\n");
-		sw.write(getPublicKeyString()+"\n\n");
+		sw.write(getPublicKeyString()+"\n");
 
 
 		if (isCertificate) {
-			sw.write("Certificate Holder Authorization Template (CHAT)\n");
+			sw.write("\nCertificate Holder Authorization Template (CHAT)\n");
 			sw.write("Terminal Type: ");
 			sw.write(getTerminalType()+"\n");
 			sw.write("Role: ");
 			sw.write(getCertificateRole()+"\n");
-			sw.write("Authorization bit string: ");
-			sw.write(getAuthorizationBitString()+"\n");
-			sw.write(getAuthorizationString()+"\n\n");
+			sw.write("Authorizations: ");
+			if (showDetails) sw.write(getAuthorizationBitString());			
+			sw.write("\n"+getAuthorizationString()+"\n\n");
 		
 			sw.write("Certificate Effective Date: ");
 			sw.write(getEffectiveDateString()+"\n");

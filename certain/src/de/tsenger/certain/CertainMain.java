@@ -22,27 +22,31 @@ import de.tsenger.certain.asn1.eac.CertificateHolderAuthorization;
 import de.tsenger.certain.asn1.eac.EACObjectIdentifiers;
 import de.tsenger.certain.asn1.eac.ECDSAPublicKey;
 import de.tsenger.certain.asn1.eac.PublicKeyDataObject;
+import de.tsenger.tools.HexString;
 
 /**
  * @author Tobias Senger
- * @version 0.3
+ * @version 0.4
  *
  */
 public class CertainMain {
 	
-	private static final String version = "0.3";
+	private static final String version = "0.4 build 130314";
 
-	@Parameter(names = {"-cert","-c"}, variableArity = true, description = "CVCA or DV certificate input files. Parameter can receive multiply values. (e.g. -cert <file1> [<file2> [<file3>] ... ]")
+	@Parameter(names = {"--cert","-c"}, variableArity = true, description = "CVCA or DV certificate input files. Parameter can receive multiply values. (e.g. -cert <file1> [<file2> [<file3>] ... ]")
 	public List<String> certFileNames;
 	
-	@Parameter(names = {"-dvreq","-r"}, description = "DV request input file")
+	@Parameter(names = {"--dvreq","-r"}, description = "DV request input file")
 	private String dvReqFileName;
 	
-	@Parameter(names = {"-linkcert","-l"}, description = "link certificate to new CVCA")
+	@Parameter(names = {"--linkcert","-l"}, description = "Link certificate input file to new CVCA")
 	private String linkCertFileName;
 	
-	@Parameter(names = { "--help", "-h" }, description = "need more help?", help = true)
+	@Parameter(names = {"--help", "-h"}, description = "need help?", help = true)
 	private boolean help;
+	
+	@Parameter(names = {"--details", "-d"}, description = "Show more details (full publickey values and signature bytes) on the certificates and requests.")
+	private boolean showDetails = false;
 
 	
 	private CertStorage certStore = null;
@@ -83,14 +87,12 @@ public class CertainMain {
 		/** CV-Certifikates from certStore **/
 		if (!certStore.isEmpty()) {
 			checkCerts();
-		}
-		
+		}		
 		
 		/** CV-Request **/
 		if (dvReq!=null) {
 			checkDvRequest();
-		}
-		
+		}		
 		
 		/** Link Certificate **/
 		if (linkCert!=null) {	
@@ -160,8 +162,23 @@ public class CertainMain {
 			}
 			
 			cvParser.setBody(cert.getBody(), true);
-			System.out.println(cvParser.getContentString());
-			verifySignatureAndPrintResult(cert);
+			System.out.println(cvParser.getContentString(showDetails));
+			
+			if (showDetails) System.out.println("Signature:\n"+HexString.bufferToHex(cert.getSignature(), true));
+			
+			//verfiy signature
+			String cvcaChrStr = getCvcaChr(cert.getCarString(),3);
+			CVCertificate cvcaCert = certStore.getCertByCHR(cvcaChrStr);
+			if (cvcaCert!=null) {
+				try {		
+					verifier = new CertainVerifier(cvcaCert.getBody().getPublicKey());
+					System.out.println("Signature is " + (verifier.hasValidSignature(cert) ? "VALID" : "!!! INVALID !!!"));
+				} catch (Exception e) {
+					System.out.println("Couldn't verifiy signature: " + e.getLocalizedMessage());
+				}
+			} else {
+				System.out.println("Can't check signature. No matching CVCA certificate available.");
+			}
 		}
 	}
 
@@ -172,7 +189,7 @@ public class CertainMain {
 		cvParser.setBody(dvReq.getCertificateBody(), false);
 		
 		printBanner("Request for "+dvReq.getCertificateBody().getChrString());
-		System.out.println(cvParser.getContentString());
+		System.out.println(cvParser.getContentString(showDetails));
 		
 		// Check if Domain Parameters are the same as in the CVCA
 		if (certFileNames!=null&&!certFileNames.isEmpty()) {
@@ -185,6 +202,8 @@ public class CertainMain {
 			}
 		}
 		
+		if (showDetails) System.out.println("Inner Signature:\n"+HexString.bufferToHex(dvReq.getInnerSignature(),true));
+		
 		//verify inner signature
 		try {
 			verifier = new CertainVerifier(dvReq.getCertificateBody().getPublicKey());
@@ -195,7 +214,9 @@ public class CertainMain {
 		
 		if (dvReq.hasOuterSignature()) {
 			String outerCarString = dvReq.getOuterCarStr();
-			System.out.println("\nOuter CAR:"+outerCarString);
+			System.out.println("\nOuter CAR: "+outerCarString);
+			
+			if (showDetails) System.out.println("Outer Signature:\n"+HexString.bufferToHex(dvReq.getOuterSignature(),true));
 			
 			CVCertificate outerCarCert = certStore.getCertByCHR(outerCarString);
 							
@@ -229,7 +250,7 @@ public class CertainMain {
 			} else {
 				System.out.println("Can't check outer signature without matching parent DV and/or CVCA certifcate.");
 			}
-		}
+		} else System.out.println("No outer signature");
 	}
 	
 	/**
@@ -239,7 +260,9 @@ public class CertainMain {
 		printBanner("Link "+linkCert.getCarString()+" -> "+linkCert.getChrString());
 		
 		cvParser.setBody(linkCert.getBody(), true);				
-		System.out.println(cvParser.getContentString());
+		System.out.println(cvParser.getContentString(showDetails));
+		
+		if (showDetails) System.out.println("Signature:\n"+HexString.bufferToHex(linkCert.getSignature(),true));
 		
 		//verify signature
 		CVCertificate cvca = certStore.getCertByCHR(linkCert.getCarString());
@@ -249,23 +272,6 @@ public class CertainMain {
 		} catch (Exception e) {
 			System.out.println("Verfifier throws exception: " + e.getLocalizedMessage());
 		}	
-	}
-
-	
-	private void verifySignatureAndPrintResult(CVCertificate cert) {
-		
-		String cvcaChrStr = getCvcaChr(cert.getCarString(),3);
-		CVCertificate cvcaCert = certStore.getCertByCHR(cvcaChrStr);
-		if (cvcaCert!=null) {
-			try {		
-				verifier = new CertainVerifier(cvcaCert.getBody().getPublicKey());
-				System.out.println("Signature is " + (verifier.hasValidSignature(cert) ? "VALID" : "!!! INVALID !!!"));
-			} catch (Exception e) {
-				System.out.println("Couldn't verifiy signature: " + e.getLocalizedMessage());
-			}
-		} else {
-			System.out.println("Can't check signature. No matching CVCA certificate available.");
-		}
 	}
 	
 
@@ -312,7 +318,7 @@ public class CertainMain {
 		return false;
 	}	
 	
-	private final byte[] data = new byte[] {0x54,0x68,0x65,0x72,0x65,0x20,0x69,0x73,0x20,0x6E,0x6F,0x20,0x68,0x65,0x6C,0x70,0x21,0x20,0x41,0x73,0x6B,0x20,0x54,0x6F,0x62,0x69,0x61,0x73,0x20,0x3A,0x2D,0x29};
+	private final byte[] data = new byte[] {0x54,0x68,0x65,0x72,0x65,0x20,0x69,0x73,0x20,0x6E,0x6F,0x20,0x68,0x65,0x6C,0x70,0x21,0x20,0x41,0x73,0x6B,0x20,0x54,0x6F,0x62,0x69,0x61,0x73,0x20,0x3A,0x29};
 	
 
 	/**
