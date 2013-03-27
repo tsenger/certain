@@ -22,6 +22,7 @@ import de.tsenger.certain.asn1.eac.CertificateHolderAuthorization;
 import de.tsenger.certain.asn1.eac.EACObjectIdentifiers;
 import de.tsenger.certain.asn1.eac.ECDSAPublicKey;
 import de.tsenger.certain.asn1.eac.PublicKeyDataObject;
+import de.tsenger.certain.asn1.eac.RSAPublicKey;
 import de.tsenger.tools.HexString;
 
 /**
@@ -31,7 +32,7 @@ import de.tsenger.tools.HexString;
  */
 public class CertainMain {
 	
-	private static final String version = "0.4 build 130314";
+	private static final String version = "0.4 build 130327";
 
 	@Parameter(names = {"--cert","-c"}, variableArity = true, description = "CVCA or DV certificate input files. Parameter can receive multiply values. (e.g. -cert <file1> [<file2> [<file3>] ... ]")
 	public List<String> certFileNames;
@@ -259,21 +260,37 @@ public class CertainMain {
 	private void checkLinkCert() {
 		printBanner("Link "+linkCert.getCarString()+" -> "+linkCert.getChrString());
 		
+		//Find machting Public Key
+		CVCertificate cvca1 = certStore.getCertByCHR(linkCert.getChrString());
+		if (cvca1 != null) {
+			boolean hasEqualPk = equalPublicKeys(linkCert.getBody().getPublicKey(), cvca1.getBody().getPublicKey());
+			System.out.println((hasEqualPk ? "The public key in this linkcert is equal to the public key in\n"
+					: "The public key in this linkcert IS NOT EQUAL to the public key in\n") + cvca1.getCarString() + "\n");
+		} else {
+			System.out.println("No CVCA was given. Can't check matching public point to any CVCA.\n");
+		}
+		
 		cvParser.setBody(linkCert.getBody(), true);				
 		System.out.println(cvParser.getContentString(showDetails));
-		
+				
+		//print Signature
 		if (showDetails) System.out.println("Signature:\n"+HexString.bufferToHex(linkCert.getSignature(),true));
-		
+				
 		//verify signature
-		CVCertificate cvca = certStore.getCertByCHR(linkCert.getCarString());
-		try {
-			verifier = new CertainVerifier(cvca.getBody().getPublicKey());
-			System.out.println("Signature is " + (verifier.hasValidSignature(linkCert) ? "VALID" : "!!! INVALID !!!"));
-		} catch (Exception e) {
-			System.out.println("Verfifier throws exception: " + e.getLocalizedMessage());
-		}	
+		CVCertificate cvca2 = certStore.getCertByCHR(linkCert.getCarString());
+		if (cvca2!=null) {
+			try {
+				verifier = new CertainVerifier(cvca2.getBody().getPublicKey());
+				System.out.println("Signature is " + (verifier.hasValidSignature(linkCert) ? "VALID" : "!!! INVALID !!!"));
+			} catch (Exception e) {
+				System.out.println("Verfifier throws exception: " + e.getLocalizedMessage());
+			}
+		} else {
+			System.out.println("Can't check signature. No matching CVCA certificate available.");
+		}
 	}
 	
+
 
 	/**
 	 * Rekursive Suche nach dem CVCA CHR
@@ -292,9 +309,29 @@ public class CertainMain {
 
 	
 	private void printBanner(String name) {
-		System.out.println("\n\n---------------------------------------------------");
+		System.out.println("\n---------------------------------------------------");
 		System.out.println("Parsing " + name);
 		System.out.println("---------------------------------------------------");
+	}
+	
+	private boolean equalPublicKeys(PublicKeyDataObject pk1, PublicKeyDataObject pk2) {
+		ASN1ObjectIdentifier pk1Oid = pk1.getUsage();
+		ASN1ObjectIdentifier pk2Oid = pk2.getUsage();
+		if (!pk1Oid.equals(pk2Oid)) return false;
+
+		if (pk1Oid.on(EACObjectIdentifiers.id_TA_ECDSA)) {
+			ECDSAPublicKey ecdsapk1 = (ECDSAPublicKey) pk1;
+			ECDSAPublicKey ecdsapk2 = (ECDSAPublicKey) pk2;
+			if (!Arrays.equals(ecdsapk1.getPublicPointY(), ecdsapk2.getPublicPointY())) return false;
+			return true;
+		} else if (pk1Oid.on(EACObjectIdentifiers.id_TA_RSA)) {
+			RSAPublicKey rsapk1 = (RSAPublicKey) pk1;
+			RSAPublicKey rsapk2 = (RSAPublicKey) pk2;
+			if (!rsapk1.getModulus().equals(rsapk2.getModulus())) return false;
+			if (!rsapk1.getPublicExponent().equals(rsapk2.getPublicExponent())) return false;
+			return true;
+		}
+		return false;
 	}
 	
 	private boolean equalDomainParameters(PublicKeyDataObject pk1, PublicKeyDataObject pk2) {

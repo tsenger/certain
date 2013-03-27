@@ -114,7 +114,9 @@ public class CertainParser {
 					sw.write("0x86 Public point Y:        " + (showDetails?"\n"+HexString.bufferToHex(y, true):HexString.bufferToHex(y, 0 ,3)+"... ("+y.length+" Bytes)")+"\n");
 					sw.write("0x87 Cofactor f:            " + (showDetails?"\n"+HexString.bufferToHex(f, true):HexString.bufferToHex(f, 0, 1)+"... ("+f.length+" Bytes)"));
 				} else {
-					sw.write(" -> Domain Parameter are missing!");
+					byte[] y = pk.getPublicPointY();
+					sw.write("0x86 Public point Y : " + (showDetails?HexString.bufferToHex(y):HexString.bufferToHex(y, 0 ,3)+"... ("+y.length+" Bytes)")+"\n");
+					sw.write(" -> no Domain Parameters");
 				}
 			} else {
 				byte[] y = pk.getPublicPointY();
@@ -161,11 +163,6 @@ public class CertainParser {
         } catch (NullPointerException e) {
         	errorText=" -> unknown or missing country code";
         }
-		try {
-			Integer.parseInt(chr.getSequenceNumber());
-		} catch (NumberFormatException e) {
-			errorText=" -> incorrect or missing sequence number";
-        }
 		chrStr = chr.getCountryCode()+chr.getHolderMnemonic()+chr.getSequenceNumber()+errorText;
 		return chrStr;
 	}
@@ -174,36 +171,36 @@ public class CertainParser {
 		StringWriter sw = new StringWriter();
 				
 		if (chat.getOid().equals(CertificateHolderAuthorization.id_AT)) {		
-			sw.write("Read access to "+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG1)?"DG1 ":"")+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG2)?"DG2 ":"")+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG3)?"DG3 ":"")+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG4)?"DG4 ":"")+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG4)?"DG5 ":"")+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG5)?"DG6 ":"")+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG7)?"DG7 ":"")+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG8)?"DG8 ":"")+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG9)?"DG9 ":"")+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG10)?"DG10 ":"")+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG11)?"DG11 ":"")+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG12)?"DG12 ":"")+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG13)?"DG13 ":"")+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG14)?"DG14 ":"")+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG15)?"DG15 ":"")+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG16)?"DG16 ":"")+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG17)?"DG17 ":"")+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG18)?"DG18 ":"")+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG19)?"DG19 ":"")+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG20)?"DG20 ":"")+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG21)?"DG21":"")+
+			sw.write("Read access to DG "+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG1)?"1, ":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG2)?"2, ":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG3)?"3, ":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG4)?"4, ":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG4)?"5, ":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG5)?"6, ":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG7)?"7, ":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG8)?"8, ":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG9)?"9, ":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG10)?"10, ":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG11)?"11, ":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG12)?"12, ":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG13)?"13, ":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG14)?"14, ":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG15)?"15, ":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG16)?"16, ":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG17)?"17, ":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG18)?"18, ":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG19)?"19, ":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG20)?"20, ":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG21)?"21":"")+
 					"\n"
 			);
-			sw.write("Write access to "+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_WADG17)?"DG17 ":"")+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_WADG18)?"DG18 ":"")+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_WADG19)?"DG19 ":"")+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_WADG20)?"DG20 ":"")+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_WADG21)?"DG21":"")+
+			sw.write("Write access to DG "+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_WADG17)?"17, ":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_WADG18)?"18, ":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_WADG19)?"19, ":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_WADG20)?"20, ":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_WADG21)?"21":"")+
 					"\n"
 			);
 			sw.write(chat.hasAuth(CertificateHolderAuthorization.AT_IQCERT)?"Install Qualified Certificate\n":"");
@@ -216,8 +213,8 @@ public class CertainParser {
 			sw.write(chat.hasAuth(CertificateHolderAuthorization.AT_AGEVRF)?"Age Verification\n":"");
 		} 
 		else if (chat.getOid().equals(CertificateHolderAuthorization.id_IS)) {
-			sw.write("Read access " + (chat.hasAuth(CertificateHolderAuthorization.IS_RADG3)?"DG3 ":"")+
-					(chat.hasAuth(CertificateHolderAuthorization.IS_RADG4)?"DG4":""));
+			sw.write("Read access to DG " + (chat.hasAuth(CertificateHolderAuthorization.IS_RADG3)?"3, ":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.IS_RADG4)?"4":""));
 		} 
 		else if (chat.getOid().equals(CertificateHolderAuthorization.id_ST)) {
 			sw.write(chat.hasAuth(CertificateHolderAuthorization.ST_GENQES)?"Generate qualified electronic signature\n":"");
@@ -247,12 +244,14 @@ public class CertainParser {
 			sw.write("Terminal Type: ");
 			sw.write(getTerminalType()+"\n");
 			sw.write("Role: ");
-			sw.write(getCertificateRole()+"\n");
-			sw.write("Authorizations: ");
-			if (showDetails) sw.write(getAuthorizationBitString());			
+			sw.write(getCertificateRole());
+			if (showDetails) {
+				sw.write("\nAuthorization bits: ");
+				sw.write(getAuthorizationBitString());	
+			}
 			sw.write("\n"+getAuthorizationString()+"\n\n");
 		
-			sw.write("Certificate Effective Date: ");
+			sw.write("Certificate Effective Date : ");
 			sw.write(getEffectiveDateString()+"\n");
 			sw.write("Certificate Expiration Date: ");
 			sw.write(getExpirationDateString()+"\n");
