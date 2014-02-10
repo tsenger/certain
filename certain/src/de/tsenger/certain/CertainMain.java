@@ -33,7 +33,7 @@ import de.tsenger.tools.HexString;
  */
 public class CertainMain {
 	
-	private static final String version = "0.5 build 131022";
+	private static final String version = "0.6 build 140210";
 
 	@Parameter(names = {"--cert","-c"}, variableArity = true, description = "CVCA or DV certificate input files. Parameter can receive multiply values. (e.g. -cert <file1> [<file2> [<file3>] ... ]")
 	public List<String> certFileNames;
@@ -165,24 +165,35 @@ public class CertainMain {
 			if (role==CertificateHolderAuthorization.DV_OFFICIAL_DOMESTIC||role==CertificateHolderAuthorization.DV_NON_OFFICIAL_FOREIGN) {
 				//TODO this is a DV, is there anything to do?
 			}
+			if (role==CertificateHolderAuthorization.TERMINAL) {
+				//TODO this is a TERMINAL, is there anything to do?
+			}
 			
 			cvParser.setBody(cert.getBody(), true);
 			System.out.println(cvParser.getContentString(showDetails));		
 			
 			if (showDetails) System.out.println("Signature:\n"+HexString.bufferToHex(cert.getSignature(), true));
 			
-			//verfiy signature
-			String cvcaChrStr = getCvcaChr(cert.getCarString(),3);
+			//verfiy signature		
+			String cvcaChrStr = getCvcaChr(cert.getChrString(),3);
 			CVCertificate cvcaCert = certStore.getCertByCHR(cvcaChrStr);
+			CVCertificate parentCert = certStore.getCertByCHR(cert.getCarString());
+			
 			if (cvcaCert!=null) {
-				try {		
-					verifier = new CertainVerifier(cvcaCert.getBody().getPublicKey());
+				try {
+					if (!cert.getRoleDescription().equals("CVCA")) // Terminal or DV
+					{
+						verifier = new CertainVerifier(cvcaCert.getBody().getPublicKey(),parentCert.getBody().getPublicKey());
+					}
+					else {	// CVCA certifcate
+						verifier = new CertainVerifier(cvcaCert.getBody().getPublicKey());
+					}
 					System.out.println("Signature is " + (verifier.hasValidSignature(cert) ? "VALID" : "!!! INVALID !!!"));
 				} catch (Exception e) {
 					System.out.println("Couldn't verifiy signature: " + e.getLocalizedMessage());
 				}
 			} else {
-				System.out.println("Can't check signature. No matching CVCA certificate available.");
+				System.out.println("Can't check signature. No matching certificate (chain) available.");
 			}
 		}
 	}
@@ -308,14 +319,21 @@ public class CertainMain {
 	 * @return CHR des CVCA Zertifikats
 	 */
 	private String getCvcaChr(String chrStr, int maxDepth) {
+		
 		if (maxDepth==0) return null;
-		String carStr = certStore.getCarString(chrStr);
-		if (carStr == null) return null;
-		if (carStr.equals(chrStr)) return chrStr;
-		else getCvcaChr(carStr, maxDepth--);
-		return carStr;
+		
+		CVCertificate cert = certStore.getCertByCHR(chrStr);
+		if (cert==null) return null;
+		
+		String role = cert.getRoleDescription();
+		String carStr = cert.getCarString();	
+		
+		if (role=="CVCA") return cert.getChrString();
+		else if (carStr==null) return null;
+		
+		else return getCvcaChr(carStr, --maxDepth);
 	}
-
+	
 	
 	private void printBanner(String name) {
 		System.out.println("\n---------------------------------------------------");
@@ -342,16 +360,36 @@ public class CertainMain {
 	}
 
 	private void printFingerprints(byte[] bytesToHash) {
-		HashCalculator hashes;
-		try {
-			hashes = new HashCalculator(bytesToHash);
-			System.out.println("Fingerprint MD5   :\n"+HexString.bufferToHex(hashes.getMD5(), true));
-			System.out.println("Fingerprint SHA1  :\n"+HexString.bufferToHex(hashes.getSHA1(), true));
-			System.out.println("Fingerprint SHA224:\n"+HexString.bufferToHex(hashes.getSHA224(), true));
-			System.out.println("Fingerprint SHA256:\n"+HexString.bufferToHex(hashes.getSHA256(), true)+"\n");
+		
+		HashCalculator hashes = new HashCalculator(bytesToHash);
+		
+		System.out.println("Fingerprint MD5:");
+		try {			
+			System.out.println(HexString.bufferToHex(hashes.getMD5(), true));
 		} catch (NoSuchAlgorithmException e) {
-			System.out.println("Couldn't calculate the fingerprints: "+e.getLocalizedMessage());
+			System.out.println(e.getLocalizedMessage());
 		}
+		
+		System.out.println("Fingerprint SHA1:");
+		try {			
+			System.out.println(HexString.bufferToHex(hashes.getSHA1(), true));
+		} catch (NoSuchAlgorithmException e) {
+			System.out.println(e.getLocalizedMessage());
+		}
+		
+		System.out.println("Fingerprint SHA224:");
+		try {			
+			System.out.println(HexString.bufferToHex(hashes.getSHA224(), true));
+		} catch (NoSuchAlgorithmException e) {
+			System.out.println(e.getLocalizedMessage());
+		}
+		
+		System.out.println("Fingerprint SHA256:");
+		try {			
+			System.out.println(HexString.bufferToHex(hashes.getSHA256(), true)+"\n");
+		} catch (NoSuchAlgorithmException e) {
+			System.out.println(e.getLocalizedMessage());
+		}		
 	}
 	
 	private boolean equalPublicKeys(PublicKeyDataObject pk1, PublicKeyDataObject pk2) {

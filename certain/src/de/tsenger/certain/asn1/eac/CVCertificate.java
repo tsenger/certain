@@ -263,17 +263,14 @@ public class CVCertificate  extends ASN1Object
 
 
     /**
-     * return a bits field coded on one byte. For signification of the
-     * several bit see Iso7816CertificateHolderAuthorization
-     *
-     * @return role and access rigth
-     * @throws IOException
+     * @return role description string
      * @see CertificateHolderAuthorization
      */
-    public byte[] getRole() throws IOException
+    
+    public String getRoleDescription() 
     {
         CertificateHolderAuthorization cha = certificateBody.getCertificateHolderAuthorization();
-        return cha.getAccessRights();
+        return cha.getRoleDescription();
     }
 
     /**

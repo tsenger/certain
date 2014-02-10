@@ -103,6 +103,7 @@ public class CertainVerifier {
 	private boolean verify(byte[] data, byte[] signatureBytes) throws OperatorCreationException, EACException {
 		try {
 			sig.initVerify(publicKey);
+//			System.out.println(HexString.bufferToHex(publicKey.getEncoded()));
 		} catch (InvalidKeyException e) {
 			throw new OperatorCreationException("invalid key: " + e.getMessage(), e);
 		}
@@ -167,7 +168,7 @@ public class CertainVerifier {
 
 	private ECParameterSpec getParams(ECDSAPublicKey key) throws EACException {
 		if (!key.hasDomainParameters()) {
-			throw new EACException("Public key does not contains EC Params");
+			throw new EACException("Public key does not contain EC Params");
 		}
 
 		BigInteger p = key.getPrimeModulusP();

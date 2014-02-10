@@ -1,6 +1,11 @@
 package de.tsenger.certain;
 
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import de.tsenger.certain.asn1.eac.CVCertificate;
@@ -40,7 +45,14 @@ public class CertStorage {
 	}
 	
 	public Set<String> getKeys() {
-		return certs.keySet();
+		//Return a sorted map
+		List<String> keys = new LinkedList<String>(certs.keySet());
+		Collections.sort(keys);
+		Map<String, CVCertificate> sortedMap = new LinkedHashMap<String, CVCertificate>();
+        for(String key: keys){
+            sortedMap.put(key, certs.get(key));
+        }
+		return sortedMap.keySet();
 	}
 	
 	public boolean containsKey(String chrStr) {
