@@ -1,7 +1,5 @@
 package de.tsenger.certain;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.security.Security;
@@ -24,6 +22,7 @@ import de.tsenger.certain.asn1.eac.EACObjectIdentifiers;
 import de.tsenger.certain.asn1.eac.ECDSAPublicKey;
 import de.tsenger.certain.asn1.eac.PublicKeyDataObject;
 import de.tsenger.certain.asn1.eac.RSAPublicKey;
+import de.tsenger.tools.FileSystem;
 import de.tsenger.tools.HexString;
 
 /**
@@ -115,33 +114,38 @@ public class CertainMain {
 		
 		if ((certFileNames!=null)&&(!certFileNames.isEmpty())) {		
 			for (Iterator<String> i = certFileNames.iterator(); i.hasNext();) {	
-				File cvcaCertFile = new File(i.next());
-				tempCvcBytes = readFile(cvcaCertFile);	
 				try {
+					tempCvcBytes = FileSystem.readFile(i.next());
 					tmpCvCert = CVCertificate.getInstance(tempCvcBytes);
 					certStore.putCert(tmpCvCert);
 				} catch (ASN1ParsingException e) {
 					System.out.println(e.getLocalizedMessage());				
+				} catch (IOException e) {
+					System.err.println("Error while open file "+e.getMessage());
 				}				
 			}
 		}
 		
-		if (dvReqFileName!=null) {
-			tempCvcBytes = readFile(new File(dvReqFileName));
+		if (dvReqFileName!=null) {			
 			try {
+				tempCvcBytes = FileSystem.readFile(dvReqFileName);
 				dvReq = CVCertificateRequest.getInstance(tempCvcBytes);
 			} catch (ASN1ParsingException e) {
 				System.out.println(e.getLocalizedMessage());				
-			}
+			} catch (IOException e) {
+				System.err.println("Error while open file "+e.getMessage());
+			}	
 		}
 		
 		if (linkCertFileName!=null) {
-			tempCvcBytes = readFile(new File(linkCertFileName));
 			try {
+				tempCvcBytes = FileSystem.readFile(linkCertFileName);
 				linkCert = CVCertificate.getInstance(tempCvcBytes);
 			} catch (ASN1ParsingException e) {
 				System.out.println(e.getLocalizedMessage());				
-			}
+			} catch (IOException e) {
+				System.err.println("Error while open file "+e.getMessage());
+			}	
 		}
 		
 	}
@@ -435,27 +439,5 @@ public class CertainMain {
 	
 	private final byte[] data = new byte[] {0x54,0x68,0x65,0x72,0x65,0x20,0x69,0x73,0x20,0x6E,0x6F,0x20,0x68,0x65,0x6C,0x70,0x21,0x20,0x41,0x73,0x6B,0x20,0x54,0x6F,0x62,0x69,0x61,0x73,0x20,0x3A,0x29};
 	
-
-	/**
-	 * Get the content of the given file as byte-Array
-	 * 
-	 * @param filename path and filename
-	 * @return binary content of the selected file
-	 */
-	private byte[] readFile(File binFile){
-		FileInputStream in = null;
-		byte buffer[] = new byte[(int) binFile.length()];
-
-		try {
-			in = new FileInputStream(binFile);
-			in.read(buffer, 0, buffer.length);
-			in.close();
-		} catch (IOException e) {
-			System.err.println("Error while open file "+binFile.getName()+": "+e.getMessage());
-			return null;
-		}
-
-		return buffer;
-	}
 
 }

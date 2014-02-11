@@ -322,4 +322,9 @@ public class CVCertificate  extends ASN1Object
     	accessRights[0]  &= 0x3F;
         return new Flags(Converter.ByteArrayToLong(accessRights));
     }
+    
+    @Override
+	public String toString() {
+    	return getChrString();
+    }
 }
