@@ -270,6 +270,7 @@ public class CVCertificate  extends ASN1Object
     public String getRoleDescription() 
     {
         CertificateHolderAuthorization cha = certificateBody.getCertificateHolderAuthorization();
+        if (cha==null) return null;
         return cha.getRoleDescription();
     }
 

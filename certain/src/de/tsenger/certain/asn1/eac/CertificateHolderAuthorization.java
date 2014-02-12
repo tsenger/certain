@@ -121,7 +121,9 @@ public class CertificateHolderAuthorization
     }
     
     public String getRoleDescription() {
-    	return (String)AuthorizationRole.get(this.accessRights.getContents()[0]&0xC0);
+    	byte[] accessRights = this.accessRights.getContents();
+    	if (accessRights==null) return null;
+    	return (String)AuthorizationRole.get(accessRights[0]&0xC0);
     }
     
     public String getTerminalTypeDescription() {
