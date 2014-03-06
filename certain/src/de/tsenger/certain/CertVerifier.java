@@ -27,7 +27,7 @@ import de.tsenger.certain.asn1.eac.ECDSAPublicKey;
 import de.tsenger.certain.asn1.eac.PublicKeyDataObject;
 import de.tsenger.certain.asn1.eac.RSAPublicKey;
 
-public class CertainVerifier {
+public class CertVerifier {
 
 	private final PublicKey publicKey;
 	private final Signature sig;
@@ -50,12 +50,12 @@ public class CertainVerifier {
 	
 
 
-	public CertainVerifier(PublicKeyDataObject pubKeyObj) throws InvalidKeySpecException, EACException, NoSuchProviderException, NoSuchAlgorithmException {
+	public CertVerifier(PublicKeyDataObject pubKeyObj) throws InvalidKeySpecException, EACException, NoSuchProviderException, NoSuchAlgorithmException {
 		this.publicKey = convertPublicKey(pubKeyObj);
 		this.sig = getSignature(pubKeyObj.getUsage());
 	}
 	
-	public CertainVerifier(PublicKeyDataObject pubKeyObj, PublicKeyDataObject pubKeyObjWithoutDomainParameter) throws InvalidKeySpecException, EACException, NoSuchProviderException, NoSuchAlgorithmException {
+	public CertVerifier(PublicKeyDataObject pubKeyObj, PublicKeyDataObject pubKeyObjWithoutDomainParameter) throws InvalidKeySpecException, EACException, NoSuchProviderException, NoSuchAlgorithmException {
 		this.publicKey = getECPublicKeyPublicKey((ECDSAPublicKey)pubKeyObj, (ECDSAPublicKey)pubKeyObjWithoutDomainParameter);
 		this.sig = getSignature(pubKeyObj.getUsage());
 	}

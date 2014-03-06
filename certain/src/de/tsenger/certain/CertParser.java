@@ -16,7 +16,7 @@ import de.tsenger.certain.asn1.eac.RSAPublicKey;
 import de.tsenger.tools.Converter;
 import de.tsenger.tools.HexString;
 
-public class CertainParser {
+public class CertParser {
 	
 
 	private CertificateBody body;
@@ -48,6 +48,7 @@ public class CertainParser {
 		clearAll();
 		this.body = body;
 		this.isCertificate = isCertificate;
+		parse();
 	}
 
 	
@@ -225,7 +226,7 @@ public class CertainParser {
 	
 	public String getContentString(boolean showDetails) {	
 		this.showDetails = showDetails;
-		parse();
+		
 		
 		StringWriter sw = new StringWriter();
 		if (profileIdStr!=null) sw.write("Profile ID: "+profileIdStr+"\n\n");

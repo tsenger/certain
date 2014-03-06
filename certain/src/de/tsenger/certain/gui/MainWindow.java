@@ -36,6 +36,7 @@ import javax.swing.tree.TreeSelectionModel;
 
 import org.bouncycastle.asn1.ASN1ParsingException;
 
+import de.tsenger.certain.CertParser;
 import de.tsenger.certain.asn1.eac.CVCertificate;
 import de.tsenger.tools.FileSystem;
 
@@ -46,6 +47,8 @@ public class MainWindow {
 	private DefaultMutableTreeNode rootNode;
 	private DefaultTreeModel treeModel;
 	private String lastFileChooserPath;
+	
+	private CertParser cvParser = new CertParser();
 	
 	private JLabel lblChrContent = null;
 	private JLabel lblCarContent = null;
@@ -219,7 +222,8 @@ public class MainWindow {
 				
 				if (treeNode.getUserObject()  instanceof CVCertificate) {
 					CVCertificate cert = (CVCertificate)treeNode.getUserObject();
-					updateInfoPanel(cert);
+					cvParser.setBody(cert.getBody(), true);
+					updateInfoPanel();
 			    }
 			}
 
@@ -277,23 +281,24 @@ public class MainWindow {
 		mnEdit.add(mntmClearTree);
 	}
 	
-	private void updateInfoPanel(CVCertificate cert) {
+	private void updateInfoPanel() {
 		
 		
-		if (cert!=null) {
-			lblChrContent.setText(cert.getChrString());
-			lblCarContent.setText(cert.getCarString());
-			lblRoleDescriptionContent.setText(cert.getRoleDescription());
-			lblTerminalTypeContent.setText(cert.getBody().getCertificateHolderAuthorization().getTerminalTypeDescription());
-			try {
-				lblEffectiveDateContent.setText(cert.getEffectiveDate().toString());
-				lblExpirationDateContent.setText(cert.getExpirationDate().toString());
-			} catch (IOException e) {}
-			
+		if (cvParser!=null) {
+			lblChrContent.setText(cvParser.getChrString());
+			lblCarContent.setText(cvParser.getCarString());
+			lblRoleDescriptionContent.setText(cvParser.getCertificateRole());
+			lblTerminalTypeContent.setText(cvParser.getTerminalType());
+			lblEffectiveDateContent.setText(cvParser.getEffectiveDateString());
+			lblExpirationDateContent.setText(cvParser.getExpirationDateString());			
 		}
 		else {
 			lblChrContent.setText("");
 			lblCarContent.setText("");
+			lblRoleDescriptionContent.setText("");
+			lblTerminalTypeContent.setText("");
+			lblEffectiveDateContent.setText("");
+			lblExpirationDateContent.setText("");
 		}
 		
 	}

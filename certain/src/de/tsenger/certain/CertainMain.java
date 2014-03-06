@@ -3,6 +3,7 @@ package de.tsenger.certain;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.security.Security;
+import java.security.cert.Certificate;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -43,6 +44,9 @@ public class CertainMain {
 	@Parameter(names = {"--linkcert","-l"}, description = "Link certificate input file to new CVCA")
 	private String linkCertFileName;
 	
+	@Parameter(names = {"--masterlist","-ml"}, description = "CVCA Master List")
+	private String masterListFileName;
+	
 	@Parameter(names = {"--help", "-h"}, description = "need help?", help = true)
 	private boolean help;
 	
@@ -55,9 +59,11 @@ public class CertainMain {
 	private CertStorage certStore = null;
 	private CVCertificateRequest dvReq = null;
 	private CVCertificate linkCert = null;	
+	
+	private MasterListParser mlParser = null;
 		
-	private CertainParser cvParser = null;
-	private CertainVerifier verifier;
+	private CertParser cvParser = null;
+	private CertVerifier verifier;
 	
 
 	public static void main(String[] args) throws IOException {
@@ -85,7 +91,7 @@ public class CertainMain {
 		if (help) System.out.println(new String(data));
 		
 		readFilesAndGetCVInstances();
-		cvParser = new CertainParser();
+		cvParser = new CertParser();
 		
 		/** CV-Certifikates from certStore **/
 		if (!certStore.isEmpty()) {
@@ -101,22 +107,27 @@ public class CertainMain {
 		if (linkCert!=null) {	
 			checkLinkCert();
 		}
+		
+		/** Master List **/
+		if (mlParser!=null) {
+			printMasterListInfo();
+		}
 
 	}
-	
+
 	/**
 	 * Read the files which are set via the command line arguments and set the CVCerticate / CVCertificateRequest instances.
 	 */
 	private void readFilesAndGetCVInstances() {
-		byte[] tempCvcBytes;
+		byte[] tempBytes;
 		CVCertificate tmpCvCert;
 		certStore = new CertStorage();
 		
 		if ((certFileNames!=null)&&(!certFileNames.isEmpty())) {		
 			for (Iterator<String> i = certFileNames.iterator(); i.hasNext();) {	
 				try {
-					tempCvcBytes = FileSystem.readFile(i.next());
-					tmpCvCert = CVCertificate.getInstance(tempCvcBytes);
+					tempBytes = FileSystem.readFile(i.next());
+					tmpCvCert = CVCertificate.getInstance(tempBytes);
 					certStore.putCert(tmpCvCert);
 				} catch (ASN1ParsingException e) {
 					System.out.println(e.getLocalizedMessage());				
@@ -128,8 +139,8 @@ public class CertainMain {
 		
 		if (dvReqFileName!=null) {			
 			try {
-				tempCvcBytes = FileSystem.readFile(dvReqFileName);
-				dvReq = CVCertificateRequest.getInstance(tempCvcBytes);
+				tempBytes = FileSystem.readFile(dvReqFileName);
+				dvReq = CVCertificateRequest.getInstance(tempBytes);
 			} catch (ASN1ParsingException e) {
 				System.out.println(e.getLocalizedMessage());				
 			} catch (IOException e) {
@@ -139,11 +150,20 @@ public class CertainMain {
 		
 		if (linkCertFileName!=null) {
 			try {
-				tempCvcBytes = FileSystem.readFile(linkCertFileName);
-				linkCert = CVCertificate.getInstance(tempCvcBytes);
+				tempBytes = FileSystem.readFile(linkCertFileName);
+				linkCert = CVCertificate.getInstance(tempBytes);
 			} catch (ASN1ParsingException e) {
 				System.out.println(e.getLocalizedMessage());				
 			} catch (IOException e) {
+				System.err.println("Error while open file "+e.getMessage());
+			}	
+		}
+		
+		if (masterListFileName!=null) {
+			try {
+				tempBytes = FileSystem.readFile(masterListFileName);
+				mlParser = new MasterListParser(tempBytes);			
+			} catch (Exception e) {
 				System.err.println("Error while open file "+e.getMessage());
 			}	
 		}
@@ -187,10 +207,10 @@ public class CertainMain {
 				try {
 					if (!cert.getRoleDescription().equals("CVCA")) // Terminal or DV
 					{
-						verifier = new CertainVerifier(cvcaCert.getBody().getPublicKey(),parentCert.getBody().getPublicKey());
+						verifier = new CertVerifier(cvcaCert.getBody().getPublicKey(),parentCert.getBody().getPublicKey());
 					}
 					else {	// CVCA certifcate
-						verifier = new CertainVerifier(cvcaCert.getBody().getPublicKey());
+						verifier = new CertVerifier(cvcaCert.getBody().getPublicKey());
 					}
 					System.out.println("Signature is " + (verifier.hasValidSignature(cert) ? "VALID" : "!!! INVALID !!!"));
 				} catch (Exception e) {
@@ -230,7 +250,7 @@ public class CertainMain {
 		
 		//verify inner signature
 		try {
-			verifier = new CertainVerifier(dvReq.getCertificateBody().getPublicKey());
+			verifier = new CertVerifier(dvReq.getCertificateBody().getPublicKey());
 			System.out.println("Inner Signature is " + (verifier.hasValidSignature(dvReq) ? "VALID" : "!!! INVALID !!!"));
 		} catch (Exception e) {
 			System.out.println("Verfifier throws exception: " + e.getLocalizedMessage());
@@ -253,7 +273,7 @@ public class CertainMain {
 					
 					if (cvcaCert!=null) {
 						try {
-							verifier = new CertainVerifier(cvcaCert.getBody().getPublicKey(),outerCarCert.getBody().getPublicKey());
+							verifier = new CertVerifier(cvcaCert.getBody().getPublicKey(),outerCarCert.getBody().getPublicKey());
 							System.out.println("Outer Signature is " + (verifier.hasValidOuterSignature(dvReq) ? "VALID" : "!!! INVALID !!!"));
 						} catch (Exception e) {
 							System.out.println("Verfifier throws exception: " + e.getLocalizedMessage());
@@ -264,7 +284,7 @@ public class CertainMain {
 					
 				} else if (parentCertRole==CertificateHolderAuthorization.CVCA) { // Outer Car is CVCA cert  
 					try {
-						verifier = new CertainVerifier(outerCarCert.getBody().getPublicKey());
+						verifier = new CertVerifier(outerCarCert.getBody().getPublicKey());
 						System.out.println("Outer Signature is " + (verifier.hasValidOuterSignature(dvReq) ? "VALID" : "!!! INVALID !!!"));
 					} catch (Exception e) {
 						System.out.println("Verfifier throws exception: " + e.getLocalizedMessage());
@@ -304,7 +324,7 @@ public class CertainMain {
 		CVCertificate cvca2 = certStore.getCertByCHR(linkCert.getCarString());
 		if (cvca2!=null) {
 			try {
-				verifier = new CertainVerifier(cvca2.getBody().getPublicKey());
+				verifier = new CertVerifier(cvca2.getBody().getPublicKey());
 				System.out.println("Signature is " + (verifier.hasValidSignature(linkCert) ? "VALID" : "!!! INVALID !!!"));
 			} catch (Exception e) {
 				System.out.println("Verfifier throws exception: " + e.getLocalizedMessage());
@@ -312,6 +332,22 @@ public class CertainMain {
 		} else {
 			System.out.println("Can't check signature. No matching CVCA certificate available.");
 		}
+	}
+	
+	/**
+	 * Show Master List Infos
+	 */
+	private void printMasterListInfo() {
+		List<Certificate> certs = mlParser.getCertificates();
+		int i=0;
+		
+		System.out.println("Master List contains "+certs.size()+" CSCA certificates.");
+		
+//		for (Certificate cert : certs) {
+//			printBanner("Cert no."+(++i));
+//			System.out.println(cert.toString());
+//		}
+		    
 	}
 	
 
