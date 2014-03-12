@@ -53,5 +53,4 @@ public interface EACObjectIdentifiers
      * bsi-de applications(3) mrtd(1) roles(2) 1}
      */
     static final ASN1ObjectIdentifier id_EAC_ePassport = bsi_de.branch("3.1.2.1");
-    
 }

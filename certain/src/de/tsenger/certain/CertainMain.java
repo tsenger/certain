@@ -1,9 +1,13 @@
 package de.tsenger.certain;
 
 import java.io.IOException;
+import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.Security;
+import java.security.SignatureException;
 import java.security.cert.Certificate;
+import java.security.cert.CertificateException;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -28,12 +32,12 @@ import de.tsenger.tools.HexString;
 
 /**
  * @author Tobias Senger
- * @version 0.5
+ * @version 0.7
  *
  */
 public class CertainMain {
 	
-	private static final String version = "0.6 build 140210";
+	private static final String version = "0.7 build 140307";
 
 	@Parameter(names = {"--cert","-c"}, variableArity = true, description = "CVCA or DV certificate input files. Parameter can receive multiply values. (e.g. -cert <file1> [<file2> [<file3>] ... ]")
 	public List<String> certFileNames;
@@ -46,6 +50,9 @@ public class CertainMain {
 	
 	@Parameter(names = {"--masterlist","-ml"}, description = "CVCA Master List")
 	private String masterListFileName;
+	
+	@Parameter(names = {"--defectlist","-dl"}, description = "CVCA Master List")
+	private String defectListFileName;
 	
 	@Parameter(names = {"--help", "-h"}, description = "need help?", help = true)
 	private boolean help;
@@ -61,6 +68,7 @@ public class CertainMain {
 	private CVCertificate linkCert = null;	
 	
 	private MasterListParser mlParser = null;
+	private DefectListParser dlParser = null;
 		
 	private CertParser cvParser = null;
 	private CertVerifier verifier;
@@ -111,6 +119,11 @@ public class CertainMain {
 		/** Master List **/
 		if (mlParser!=null) {
 			printMasterListInfo();
+		}
+		
+		/** Master List **/
+		if (dlParser!=null) {
+			printDefectListInfo();
 		}
 
 	}
@@ -163,6 +176,15 @@ public class CertainMain {
 			try {
 				tempBytes = FileSystem.readFile(masterListFileName);
 				mlParser = new MasterListParser(tempBytes);			
+			} catch (Exception e) {
+				System.err.println("Error while open file "+e.getMessage());
+			}	
+		}
+		
+		if (defectListFileName!=null) {
+			try {
+				tempBytes = FileSystem.readFile(defectListFileName);
+				dlParser = new DefectListParser(tempBytes);			
 			} catch (Exception e) {
 				System.err.println("Error while open file "+e.getMessage());
 			}	
@@ -343,10 +365,42 @@ public class CertainMain {
 		
 		System.out.println("Master List contains "+certs.size()+" CSCA certificates.");
 		
-//		for (Certificate cert : certs) {
-//			printBanner("Cert no."+(++i));
-//			System.out.println(cert.toString());
-//		}
+		for (Certificate cert : certs) {
+			printBanner("Cert no."+(++i));
+			try {
+				cert.verify(cert.getPublicKey());
+				System.out.println("Signature is valid");
+			} catch (InvalidKeyException e) {
+				// TODO Auto-generated catch block
+				System.out.println(e.getMessage());
+			} catch (CertificateException e) {
+				// TODO Auto-generated catch block
+				System.out.println(e.getMessage());
+			} catch (NoSuchAlgorithmException e) {
+				// TODO Auto-generated catch block
+				System.out.println(e.getMessage());
+			} catch (NoSuchProviderException e) {
+				// TODO Auto-generated catch block
+				System.out.println(e.getMessage());
+			} catch (SignatureException e) {
+				// TODO Auto-generated catch block
+				System.out.println(e.getMessage());
+			}
+		}
+		    
+	}
+	
+	/**
+	 * Show Master List Infos
+	 */
+	private void printDefectListInfo() {
+		List<Certificate> certs = dlParser.getCertificates();
+		
+		System.out.println("Master List contains "+certs.size()+" CSCA certificates.");
+		
+		for (Certificate cert : certs) {
+			System.out.println(cert.toString());
+		}
 		    
 	}
 	
