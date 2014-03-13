@@ -7,7 +7,7 @@ import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.BERSequence;
-import org.bouncycastle.asn1.BERSet;
+import org.bouncycastle.asn1.DLSet;
 
 
 
@@ -27,7 +27,7 @@ public class DefectList extends ASN1Object
 {
 	private ASN1Integer version;
 	private ASN1ObjectIdentifier hashAlg;
-	private BERSet defects;
+	private DLSet defects;
 	
 	private DefectList(ASN1Sequence seq) {
 		
@@ -37,7 +37,7 @@ public class DefectList extends ASN1Object
 		
 		version = ASN1Integer.getInstance(seq.getObjectAt(0));
 		hashAlg = ASN1ObjectIdentifier.getInstance(seq.getObjectAt(1));
-		defects = (BERSet) BERSet.getInstance(seq.getObjectAt(2));
+		defects = (DLSet) DLSet.getInstance(seq.getObjectAt(2));
 		
 	}
 	
@@ -72,7 +72,7 @@ public class DefectList extends ASN1Object
 		return hashAlg;
 	}
 	
-	public BERSet getDefects() {
+	public DLSet getDefects() {
 		return defects;
 	}
 

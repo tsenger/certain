@@ -8,12 +8,16 @@ import java.security.Security;
 import java.security.SignatureException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
+import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.ASN1ParsingException;
+import org.bouncycastle.asn1.cms.IssuerAndSerialNumber;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import com.beust.jcommander.JCommander;
@@ -27,6 +31,9 @@ import de.tsenger.certain.asn1.eac.EACObjectIdentifiers;
 import de.tsenger.certain.asn1.eac.ECDSAPublicKey;
 import de.tsenger.certain.asn1.eac.PublicKeyDataObject;
 import de.tsenger.certain.asn1.eac.RSAPublicKey;
+import de.tsenger.certain.asn1.mrtdpki.Defect;
+import de.tsenger.certain.asn1.mrtdpki.DefectList;
+import de.tsenger.certain.asn1.mrtdpki.KnownDefect;
 import de.tsenger.tools.FileSystem;
 import de.tsenger.tools.HexString;
 
@@ -98,7 +105,7 @@ public class CertainMain {
 	public void run() {
 		if (help) System.out.println(new String(data));
 		
-		readFilesAndGetCVInstances();
+		readFilesAndGetInstances();
 		cvParser = new CertParser();
 		
 		/** CV-Certifikates from certStore **/
@@ -131,7 +138,7 @@ public class CertainMain {
 	/**
 	 * Read the files which are set via the command line arguments and set the CVCerticate / CVCertificateRequest instances.
 	 */
-	private void readFilesAndGetCVInstances() {
+	private void readFilesAndGetInstances() {
 		byte[] tempBytes;
 		CVCertificate tmpCvCert;
 		certStore = new CertStorage();
@@ -360,13 +367,14 @@ public class CertainMain {
 	 * Show Master List Infos
 	 */
 	private void printMasterListInfo() {
-		List<Certificate> certs = mlParser.getCertificates();
+		List<Certificate> cscaCerts = mlParser.getCSCACertificates();
+		List<Certificate> signerCerts = mlParser.getMasterListSignerCertificates();
 		int i=0;
 		
-		System.out.println("Master List contains "+certs.size()+" CSCA certificates.");
+		System.out.println("Master List contains "+cscaCerts.size()+" CSCA certificates. \nThis Master has "+signerCerts.size()+" Master List Signers");
 		
-		for (Certificate cert : certs) {
-			printBanner("Cert no."+(++i));
+		for (Certificate cert : cscaCerts) {
+			printBanner("CSCA Cert no."+(++i));
 			try {
 				cert.verify(cert.getPublicKey());
 				System.out.println("Signature is valid");
@@ -391,15 +399,48 @@ public class CertainMain {
 	}
 	
 	/**
-	 * Show Master List Infos
+	 * Show Defect List Infos
 	 */
 	private void printDefectListInfo() {
-		List<Certificate> certs = dlParser.getCertificates();
+		List<Certificate> certs = dlParser.getDefectListSignerCertificates();
+		DefectList defectList = dlParser.getDefectList();
+		Defect defect;
 		
-		System.out.println("Master List contains "+certs.size()+" CSCA certificates.");
+		System.out.println("Defect List contains defects from "+defectList.getDefects().size()+" different DS certificates.");
 		
+		for (int i=0;i<defectList.getDefects().size();i++) {
+			defect = Defect.getInstance(defectList.getDefects().getObjectAt(i));
+			
+			if (defect.getSignerId().getId() instanceof ASN1Encodable) { //SignerIdentifier CHOICE is IssuerAndSerialNumber 
+				IssuerAndSerialNumber iasn = IssuerAndSerialNumber.getInstance(defect.getSignerId().getId());
+				System.out.println(iasn.getName().toString()+", SerialNumber: "+iasn.getSerialNumber());
+				
+				
+			} else if (defect.getSignerId().getId() instanceof ASN1OctetString) {	//SignerIdentifier CHOICE is SubjectKeyIdentifier 
+				byte[] encoded = ((ASN1OctetString)defect.getSignerId().getId()).getOctets();
+				System.out.println(HexString.bufferToHex(encoded));
+				
+			}
+			
+			if (defect.getCertificateHash()!=null) { //optional Hash available?
+				byte[] encoded = defect.getCertificateHash().getOctets();
+				System.out.println("Certificate Hash: "+ HexString.bufferToHex(encoded));
+			}
+			System.out.println("This DS certificate has "+defect.getKnownDefects().size()+" known defects.");
+			
+			KnownDefect knownDefect;
+			for (int j=0;j<defect.getKnownDefects().size();j++) {
+				knownDefect = KnownDefect.getInstance(defect.getKnownDefects().getObjectAt(j));
+				System.out.println(knownDefect.getDefectType());
+			}
+			
+			System.out.println("--------------------------------------------------------------------------");
+			
+		}
+		
+		System.out.println("The Defects List contains "+certs.size()+" Defects List Signer certificates.");
 		for (Certificate cert : certs) {
-			System.out.println(cert.toString());
+			System.out.println(((X509Certificate)cert).getSubjectDN());
 		}
 		    
 	}

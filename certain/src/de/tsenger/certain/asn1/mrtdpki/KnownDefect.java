@@ -36,6 +36,20 @@ public class KnownDefect extends ASN1Object {
 			parameters = seq.getObjectAt(1);
 		}
 	}
+	
+	public static KnownDefect getInstance(Object obj)
+    {
+        if (obj instanceof KnownDefect)
+        {
+            return (KnownDefect)obj;
+        }
+        else if (obj != null)
+        {
+            return new KnownDefect(ASN1Sequence.getInstance(obj));
+        }
+
+        return null;
+    }
 
 	@Override
 	public ASN1Primitive toASN1Primitive() {

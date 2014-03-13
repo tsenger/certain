@@ -25,6 +25,9 @@ import org.bouncycastle.asn1.pkcs.SignedData;
 import org.bouncycastle.jce.provider.X509CertificateObject;
 
 public class MasterListParser {
+	
+	private static  List<Certificate> cscaCerts = new ArrayList<Certificate>();
+	private static  List<Certificate> signerCerts = new ArrayList<Certificate>();
 
 	/** Use this to get all certificates, including link certificates. */
 	private static final CertSelector IDENTITY_SELECTOR = new X509CertSelector() {
@@ -52,12 +55,11 @@ public class MasterListParser {
 		@Override
 		public Object clone() { return this; }
 	};
-	
-	private List<Certificate> certificates;
 
 	/** Private constructor, only used locally. */
 	private MasterListParser() {
-		this.certificates = new ArrayList<Certificate>(256);	
+		cscaCerts = new ArrayList<Certificate>(256);
+		signerCerts  = new ArrayList<Certificate>(16);
 	}
 	
 	/**
@@ -67,30 +69,30 @@ public class MasterListParser {
 	 */
 	public MasterListParser(Collection<Certificate> certificates) {
 		this();
-		this.certificates.addAll(certificates);
+		MasterListParser.cscaCerts.addAll(certificates);
 	}
 	
 	public MasterListParser(byte[] binary, CertSelector selector) {
 		this();
-		this.certificates.addAll(searchCertificates(binary, selector));
+		searchCertificates(binary, selector);
 	}
 	
 	public MasterListParser(byte[] binary) {
 		this(binary, IDENTITY_SELECTOR);
 	}
 	
-	public List<Certificate> getCertificates() {
-		return certificates;
+	public List<Certificate> getCSCACertificates() {
+		return cscaCerts;
+	}
+	
+	public List<Certificate> getMasterListSignerCertificates() {
+		return signerCerts;
 	}
 	
 	/* PRIVATE METHODS BELOW */
 	
-	private static List<Certificate> searchCertificates(byte[] binary, CertSelector selector) {
+	private static void searchCertificates(byte[] binary, CertSelector selector) {
 		
-		List<Certificate> result = new ArrayList<Certificate>();
-		List<Certificate> result2 = new ArrayList<Certificate>();
-		
-
 		try {
 			ASN1Sequence sequence = ASN1Sequence.getInstance(binary);
 			List<SignedData> signedDataList = getSignedDataFromDERObject(sequence, null);
@@ -104,14 +106,13 @@ public class MasterListParser {
 				//			}
 
 				//The encoded certificates in the cscsMasterList
-				
 				ContentInfo contentInfo = signedData.getContentInfo();
-				Object content = contentInfo.getContent();
 				ASN1ObjectIdentifier masterlistOID =  contentInfo.getContentType();
+				Object content = contentInfo.getContent();
 				Collection<Certificate> certificates = getCertificatesFromDERObject(content, null);
 				for (Certificate certificate: certificates) {
 					if (selector.match(certificate)) {
-						result.add(certificate);
+						cscaCerts.add(certificate);
 					}
 				}
 				
@@ -119,24 +120,12 @@ public class MasterListParser {
 				Object certs = signedData.getCertificates(); //signer Certs
 				Collection<Certificate> signerCertificates = getCertificatesFromDERObject(certs, null);
 				System.out.println("This Master List contains "+signerCertificates.size()+" Master List Signer Certificates.");
-				for (Certificate certificate: signerCertificates) {
-					if (selector.match(certificate)) {
-						System.out.println("Master List Signer Certs:\n"+certificate.toString());
-//						result2.add(certificate);
-					}
-				}
-				
-				//SignerInfo
-				signedData.getSignerInfos();
-				
 				
 				
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		
-		return result;
 	}
 	
 	private static List<SignedData> getSignedDataFromDERObject(Object o, List<SignedData> result) {

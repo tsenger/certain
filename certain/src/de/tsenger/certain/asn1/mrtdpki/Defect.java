@@ -6,9 +6,9 @@ import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.ASN1Set;
-import org.bouncycastle.asn1.BEROctetString;
 import org.bouncycastle.asn1.BERSequence;
-import org.bouncycastle.asn1.BERSet;
+import org.bouncycastle.asn1.DEROctetString;
+import org.bouncycastle.asn1.DLSet;
 import org.bouncycastle.asn1.cms.SignerIdentifier;
 
 
@@ -27,8 +27,8 @@ import org.bouncycastle.asn1.cms.SignerIdentifier;
 public class Defect extends ASN1Object {
 	
 	private SignerIdentifier signerId;
-	private BEROctetString certificateHash;
-	private BERSet knownDefects;
+	private DEROctetString certificateHash;
+	private DLSet knownDefects;
 	
 	private Defect(ASN1Sequence seq) {
 		
@@ -41,11 +41,11 @@ public class Defect extends ASN1Object {
 		signerId = SignerIdentifier.getInstance(seq.getObjectAt(index++));
 		
 		if (seq.getObjectAt(index) instanceof ASN1OctetString) {
-			certificateHash = (BEROctetString) BEROctetString.getInstance(seq.getObjectAt(index++));
+			certificateHash = (DEROctetString) DEROctetString.getInstance(seq.getObjectAt(index++));
 		}
 		
 		if (seq.getObjectAt(index) instanceof ASN1Set) {
-			knownDefects = (BERSet) BERSet.getInstance(seq.getObjectAt(index++));
+			knownDefects = (DLSet) DLSet.getInstance(seq.getObjectAt(index++));
 		} 
 	}
 	
@@ -81,11 +81,11 @@ public class Defect extends ASN1Object {
 		return signerId;
 	}
 	
-	public BEROctetString getCertificateHash() {
+	public DEROctetString getCertificateHash() {
 		return certificateHash;
 	}
 	
-	public BERSet getKnownDefects() {
+	public DLSet getKnownDefects() {
 		return knownDefects;
 	}
 
