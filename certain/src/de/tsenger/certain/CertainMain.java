@@ -8,27 +8,18 @@ import java.security.Security;
 import java.security.SignatureException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
-import org.bouncycastle.asn1.ASN1Encodable;
-import org.bouncycastle.asn1.ASN1Integer;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
-import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.ASN1ParsingException;
-import org.bouncycastle.asn1.DEREnumerated;
-import org.bouncycastle.asn1.DERSequence;
-import org.bouncycastle.asn1.DLSet;
-import org.bouncycastle.asn1.cms.IssuerAndSerialNumber;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
 
-import de.tsenger.certain.asn1.eac.BSIObjectIdentifiers;
 import de.tsenger.certain.asn1.eac.CVCertificate;
 import de.tsenger.certain.asn1.eac.CVCertificateRequest;
 import de.tsenger.certain.asn1.eac.CertificateHolderAuthorization;
@@ -36,9 +27,6 @@ import de.tsenger.certain.asn1.eac.EACObjectIdentifiers;
 import de.tsenger.certain.asn1.eac.ECDSAPublicKey;
 import de.tsenger.certain.asn1.eac.PublicKeyDataObject;
 import de.tsenger.certain.asn1.eac.RSAPublicKey;
-import de.tsenger.certain.asn1.mrtdpki.Defect;
-import de.tsenger.certain.asn1.mrtdpki.DefectList;
-import de.tsenger.certain.asn1.mrtdpki.KnownDefect;
 import de.tsenger.tools.FileSystem;
 import de.tsenger.tools.HexString;
 
@@ -49,7 +37,7 @@ import de.tsenger.tools.HexString;
  */
 public class CertainMain {
 	
-	private static final String version = "0.7 build 140307";
+	private static final String version = "0.7 build 140327";
 
 	@Parameter(names = {"--cert","-c"}, variableArity = true, description = "CVCA or DV certificate input files. Parameter can receive multiply values. (e.g. -cert <file1> [<file2> [<file3>] ... ]")
 	public List<String> certFileNames;
@@ -60,10 +48,10 @@ public class CertainMain {
 	@Parameter(names = {"--linkcert","-l"}, description = "Link certificate input file to new CVCA")
 	private String linkCertFileName;
 	
-	@Parameter(names = {"--masterlist","-ml"}, description = "CVCA Master List")
-	private String masterListFileName;
+//	@Parameter(names = {"--masterlist","-ml"}, description = "CVCA Master List")
+//	private String masterListFileName;
 	
-	@Parameter(names = {"--defectlist","-dl"}, description = "CVCA Master List")
+	@Parameter(names = {"--defectlist","-dl"}, description = "shows all defects in the given Defect List")
 	private String defectListFileName;
 	
 	@Parameter(names = {"--help", "-h"}, description = "need help?", help = true)
@@ -133,7 +121,7 @@ public class CertainMain {
 			printMasterListInfo();
 		}
 		
-		/** Master List **/
+		/** Defect List **/
 		if (dlParser!=null) {
 			printDefectListInfo();
 		}
@@ -184,14 +172,14 @@ public class CertainMain {
 			}	
 		}
 		
-		if (masterListFileName!=null) {
-			try {
-				tempBytes = FileSystem.readFile(masterListFileName);
-				mlParser = new MasterListParser(tempBytes);			
-			} catch (Exception e) {
-				System.err.println("Error while open file "+e.getMessage());
-			}	
-		}
+//		if (masterListFileName!=null) {
+//			try {
+//				tempBytes = FileSystem.readFile(masterListFileName);
+//				mlParser = new MasterListParser(tempBytes);			
+//			} catch (Exception e) {
+//				System.err.println("Error while open file "+e.getMessage());
+//			}	
+//		}
 		
 		if (defectListFileName!=null) {
 			try {
@@ -407,119 +395,8 @@ public class CertainMain {
 	 * Show Defect List Infos
 	 */
 	private void printDefectListInfo() {
-		List<Certificate> certs = dlParser.getDefectListSignerCertificates();
-		DefectList defectList = dlParser.getDefectList();
-		Defect defect;
 		
-		System.out.println("Defect List contains defects from "+defectList.getDefects().size()+" different DS certificates.\n");
-		System.out.println("--------------------------------------------------------------------------");
-		
-		for (int i=0;i<defectList.getDefects().size();i++) {
-			defect = Defect.getInstance(defectList.getDefects().getObjectAt(i));
-			
-			if (defect.getSignerId().getId() instanceof ASN1Encodable) { //SignerIdentifier CHOICE is IssuerAndSerialNumber 
-				IssuerAndSerialNumber iasn = IssuerAndSerialNumber.getInstance(defect.getSignerId().getId());
-				System.out.println(iasn.getName().toString()+", SerialNumber: "+iasn.getSerialNumber());
-				
-				
-			} else if (defect.getSignerId().getId() instanceof ASN1OctetString) {	//SignerIdentifier CHOICE is SubjectKeyIdentifier 
-				byte[] encoded = ((ASN1OctetString)defect.getSignerId().getId()).getOctets();
-				System.out.println(HexString.bufferToHex(encoded));
-				
-			}
-			
-			if (defect.getCertificateHash()!=null) { //optional Hash available?
-				byte[] encoded = defect.getCertificateHash().getOctets();
-				System.out.println("Certificate Hash: "+ HexString.bufferToHex(encoded));
-			}
-			System.out.println("This DS certificate has "+defect.getKnownDefects().size()+" known defects.");
-			
-			KnownDefect knownDefect;
-			for (int j=0;j<defect.getKnownDefects().size();j++) {
-				knownDefect = KnownDefect.getInstance(defect.getKnownDefects().getObjectAt(j));
-				ASN1ObjectIdentifier id_defectType = knownDefect.getDefectType();
-				
-				if (id_defectType.equals(BSIObjectIdentifiers.certRevoked)) {
-					System.out.println("Authentication Defect: DS certificate revoked (OID: "+id_defectType+")");
-					DEREnumerated statusCode = (DEREnumerated)knownDefect.getParameters();
-					
-					switch (statusCode.getValue().intValue()) {
-					case 0: System.out.println("\tno details given (status code 0: noIndication)");
-					case 1: System.out.println("\trevocation under investigation (status code 1: onHold)");
-					case 2: System.out.println("\tthe certificate has been used for testing purpose (status code 2: testing)");
-					case 3: System.out.println("\tthe issuer has revoked the certificate by CRL (status code 3: revoked by Issuer)");
-					case 4: System.out.println("\tthe Defect List Signer has revoked the certificate (status code 4: revoked DLS)");
-					default: System.out.println("\tstatus codes >=32 can be used for internal purpose (status code "+statusCode.getValue().intValue()+": proprietary)");
-					}
-					
-				} else if (id_defectType.equals(BSIObjectIdentifiers.certReplaced)) {
-					System.out.println("Authentication Defect: DS certificate malformed (OID: "+id_defectType+")");
-					Certificate replacementCert= (Certificate)knownDefect.getParameters();
-					System.out.println("\tReplacement Certificate:\n\t"+replacementCert.toString());
-				} else if (id_defectType.equals(BSIObjectIdentifiers.certChipAuthKeyRevoked)) {
-					System.out.println("Authentication Defect: Chip Authentication private keys compromised (OID: "+id_defectType+")");
-				} else if (id_defectType.equals(BSIObjectIdentifiers.certActiveAuthKeyRevoked)) {
-					System.out.println("Authentication Defect: Active Authentication private keys compromised (OID: "+id_defectType+")");
-				} else if (id_defectType.equals(BSIObjectIdentifiers.ePassportDGMalformed)) {
-					System.out.println("Personalisation Defect ePassport: data group malformed (OID: "+id_defectType+")");
-					DLSet malformedDgs = (DLSet)knownDefect.getParameters();
-					System.out.print("\tDatagroups: ");
-					for (int k=0;k<malformedDgs.size();k++){
-						int dgno = ASN1Integer.getInstance(malformedDgs.getObjectAt(k)).getValue().intValue();
-						System.out.print(dgno+" ");
-					}
-					System.out.println();
-					
-				} else if (id_defectType.equals(BSIObjectIdentifiers.SODInvalid)) {
-					System.out.println("Personalisation Defect ePassport: SOD malformed (OID: "+id_defectType+")");
-				} else if (id_defectType.equals(BSIObjectIdentifiers.COMSODDiscrepancy)) {
-					System.out.println("Personalisation Defect ePassport: COM SOD discrepancy (OID: "+id_defectType+")");
-				} else if (id_defectType.equals(BSIObjectIdentifiers.eIDDGMalformed)) {
-					System.out.println("Personalisation Defect eID: data group malformed (OID: "+id_defectType+")");
-					DLSet malformedDgs = (DLSet)knownDefect.getParameters();
-					System.out.print("\tDatagroups: ");
-					for (int l=0;l<malformedDgs.size();l++){
-						int dgno = ASN1Integer.getInstance(malformedDgs.getObjectAt(l)).getValue().intValue();
-						System.out.print(dgno+" ");
-					}
-					System.out.println();
-				} else if (id_defectType.equals(BSIObjectIdentifiers.eIDIntegrity)) {
-					System.out.println("Personalisation Defect eID: application integrity uncertain (OID: "+id_defectType+")");
-				} else if (id_defectType.equals(BSIObjectIdentifiers.eIDSecurityInfoMissing)) {
-					System.out.println("Personalisation Defect eID: SecurityInfo missing (OID: "+id_defectType+")");
-				} else if (id_defectType.equals(BSIObjectIdentifiers.eIDDGMissing)) {
-					System.out.println("Personalisation Defect eID: data group missing (OID: "+id_defectType+")");
-					DLSet malformedDgs = (DLSet)knownDefect.getParameters();
-					System.out.print("\tDatagroups: ");
-					for (int m=0;m<malformedDgs.size();m++){
-						int dgno = ASN1Integer.getInstance(malformedDgs.getObjectAt(m)).getValue().intValue();
-						System.out.print(dgno+" ");
-					}
-					System.out.println();
-				} else if (id_defectType.equals(BSIObjectIdentifiers.CardSecurityMalformed)) {
-					System.out.println("General Document Defects: Card Security Object malformed (OID: "+id_defectType+")");
-					DERSequence cardSecurity = (DERSequence)knownDefect.getParameters();
-					System.out.println("Size of new CardSecurity: "+cardSecurity.size());
-				} else if (id_defectType.equals(BSIObjectIdentifiers.ChipSecurityMalformed)) {
-					System.out.println("General Document Defects: Chip Security Object malformed (OID: "+id_defectType+")");
-				} else if (id_defectType.equals(BSIObjectIdentifiers.PowerDownReq)) {
-					System.out.println("General Document Defects: Power Down is required (OID: "+id_defectType+")");
-				} else if (id_defectType.equals(BSIObjectIdentifiers.DSMalformed)) {
-					System.out.println("General Document Defects: Document Signer is malformed (OID: "+id_defectType+")");
-				} else if (id_defectType.equals(BSIObjectIdentifiers.EAC2PrivilegedTerminalInfoMissing)) {
-					System.out.println("General Document Defects: EAC2 PrivilegedTerminalInfo missing (OID: "+id_defectType+")");
-				}
-				
-			}
-			
-			System.out.println("--------------------------------------------------------------------------");
-			
-		}
-		
-		System.out.println("\nThe Defect List has "+certs.size()+" Defects List Signer certificates.");
-		for (Certificate cert : certs) {
-			System.out.println(((X509Certificate)cert).getSubjectDN());
-		}
+		System.out.println(dlParser.getDefectListInfoString(showDetails));
 		    
 	}
 	

@@ -30,8 +30,8 @@
         		org/bouncycastle/jcajce/provider/asymmetric/rsa/*" 
         	destdir="${class.dir}" 
         	includeAntRuntime="false"
-        	source="1.6"
-        	target="1.6" />
+        	source="1.7"
+        	target="1.7" />
     	<delete dir="${tmp.dir}/${ant.project.name}"/>
     </target>
 
