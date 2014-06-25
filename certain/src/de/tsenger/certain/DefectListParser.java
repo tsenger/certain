@@ -1,6 +1,6 @@
 package de.tsenger.certain;
 
-import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.security.InvalidKeyException;
@@ -14,29 +14,29 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509CertSelector;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Enumeration;
+import java.util.Iterator;
 import java.util.List;
 
 import javax.security.auth.x500.X500Principal;
 
 import org.bouncycastle.asn1.ASN1Encodable;
-import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1Integer;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1OctetString;
-import org.bouncycastle.asn1.ASN1Primitive;
-import org.bouncycastle.asn1.ASN1Sequence;
-import org.bouncycastle.asn1.ASN1Set;
 import org.bouncycastle.asn1.DEREnumerated;
 import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.DERSequence;
-import org.bouncycastle.asn1.DERTaggedObject;
 import org.bouncycastle.asn1.DLSet;
 import org.bouncycastle.asn1.cms.IssuerAndSerialNumber;
-import org.bouncycastle.asn1.pkcs.ContentInfo;
-import org.bouncycastle.asn1.pkcs.SignedData;
-import org.bouncycastle.jce.provider.X509CertificateObject;
+import org.bouncycastle.asn1.x509.SubjectKeyIdentifier;
+import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
+import org.bouncycastle.cms.CMSException;
+import org.bouncycastle.cms.CMSProcessableByteArray;
+import org.bouncycastle.cms.CMSSignedData;
+import org.bouncycastle.cms.SignerInformation;
+import org.bouncycastle.operator.OperatorCreationException;
+import org.bouncycastle.util.Store;
 
 import de.tsenger.certain.asn1.eac.BSIObjectIdentifiers;
 import de.tsenger.certain.asn1.mrtdpki.Defect;
@@ -48,6 +48,8 @@ public class DefectListParser {
 	
 	private List<Certificate> defectListSignerCertificates;
 	private DefectList defectList;
+	private CMSSignedData cmsSignedData;
+	private SignerInformation signerInfo;
 
 	/** Use this to get all defectListSignerCertificates, including link defectListSignerCertificates. */
 	private static final CertSelector IDENTITY_SELECTOR = new X509CertSelector() {
@@ -79,26 +81,20 @@ public class DefectListParser {
 
 	/** Private constructor, only used locally. */
 	private DefectListParser() {
-		this.defectListSignerCertificates = new ArrayList<Certificate>(16);	
+		this.defectListSignerCertificates = new ArrayList<Certificate>(4);	
 	}
 	
-	/**
-	 * Constructs a defect list from a collection of defectListSignerCertificates.
-	 * 
-	 * @param defectListSignerCertificates a collection of defectListSignerCertificates
-	 */
-	public DefectListParser(Collection<Certificate> certificates) {
-		this();
-		this.defectListSignerCertificates.addAll(certificates);
-	}
 	
 	public DefectListParser(byte[] binary, CertSelector selector) {
 		this();
-		SignedData signedData = getSignedDataFromBinary(binary);
-		this.defectList = getDefectList(signedData);
-		this.defectListSignerCertificates.addAll(getDefectListSignerCertificatesFromSignedData(signedData, selector));
+		
+		this.cmsSignedData = buildCMSSignedDataFromBinary(binary);		
+		this.signerInfo = parseSignerInfo();
+		this.defectList = parseDefectList();
+		this.defectListSignerCertificates = getDefectListSignerCertificates(cmsSignedData);		
 	}
 	
+
 	public DefectListParser(byte[] binary) {
 		this(binary, IDENTITY_SELECTOR);
 	}
@@ -116,6 +112,8 @@ public class DefectListParser {
 		Defect defect;
 		
 		StringWriter sw = new StringWriter();
+		
+		if 	(cmsSignedData.getVersion()!=3)	System.out.println("SignedData Version SHOULD be 3 but is "+ cmsSignedData.getVersion()+"!");
 		
 		sw.write("\nThis Defect List contains defects from "+defectList.getDefects().size()+" different DS certificates\n");
 		sw.write("and contains "+defectListSignerCertificates.size()+" Defects List Signer certificates:\n\n");
@@ -135,31 +133,40 @@ public class DefectListParser {
 			for (Certificate cert : defectListSignerCertificates) {
 				
 				X509Certificate x509Cert = (X509Certificate) cert;
+
 				String subjectDN = x509Cert.getSubjectDN().toString();
 				String issuerDN = x509Cert.getIssuerDN().toString();
 				
 				sw.write("Subject DN: "+subjectDN+"\n");
 				sw.write("Issuer DN:  "+issuerDN+"\n");
+				DEROctetString oct = (DEROctetString) DEROctetString.getInstance(x509Cert.getExtensionValue("2.5.29.14"));
+				SubjectKeyIdentifier skid = SubjectKeyIdentifier.getInstance(oct.getOctets());
+				sw.write("X509 SubjectKeyIdentifier: "+HexString.bufferToHex(skid.getKeyIdentifier())+"\n");
 				
 				try {
 					((X509Certificate) cert).verify(pubKey);
-					sw.write("Signature is valid.\n");
+					sw.write("Signature is VALID.\n\n");
 				} catch (InvalidKeyException | CertificateException | NoSuchAlgorithmException | NoSuchProviderException | SignatureException e) {
-					System.out.print("Verifying signature of "+((X509Certificate) cert).getSubjectDN()+" failed: ");
-					sw.write(e.getLocalizedMessage()+"\n");
+					sw.write("Verifying signature of "+((X509Certificate) cert).getSubjectDN()+" failed: ");
+					sw.write(e.getLocalizedMessage()+"\n\n");
 				}
 			}
 		} else {
-			sw.write("Could verify signatures: no public key available\n");
+			sw.write("Could verify signatures. Didn't found a valid issuer\n");
 		}
 		
+		sw.write("Signature of SignedData object is "+(verifySignedData()?"VALID":"!!! INVALID !!!")+"\n");
+		
+		
+				
 		for (int i=0;i<defectList.getDefects().size();i++) {
 			sw.write("\n++++++++++++++++++++++++++++++++++ DEFECT No. "+(i+1)+" ++++++++++++++++++++++++++++++++++\n");
 			defect = Defect.getInstance(defectList.getDefects().getObjectAt(i));
 			
 			if (defect.getSignerId().getId() instanceof ASN1Encodable) { //SignerIdentifier CHOICE is IssuerAndSerialNumber 
 				IssuerAndSerialNumber iasn = IssuerAndSerialNumber.getInstance(defect.getSignerId().getId());
-				sw.write(iasn.getName().toString()+", SerialNumber: "+iasn.getSerialNumber()+"\n");
+				
+				sw.write("DS Issuer: "+iasn.getName().toString()+"; DS Serial No.: "+iasn.getSerialNumber()+"\n");
 				
 				
 			} else if (defect.getSignerId().getId() instanceof ASN1OctetString) {	//SignerIdentifier CHOICE is SubjectKeyIdentifier 
@@ -256,161 +263,92 @@ public class DefectListParser {
 			}
 						
 		}
-		
-		
-		
+
 		return sw.toString();
+	}
+	
+	public boolean verifySignedData() {
+		boolean result = false;
+		for (Certificate cert : defectListSignerCertificates) {			
+			X509Certificate x509Cert = (X509Certificate) cert;
+			
+			if (x509Cert.getSubjectDN().toString().equals(x509Cert.getIssuerDN().toString())) {
+				SignedDataVerifier verifier = new SignedDataVerifier(x509Cert);
+				try {
+					result = verifier.signatureVerified(cmsSignedData);
+				} catch (CertificateException | OperatorCreationException | CMSException e) {
+					System.out.println("Couldn't verify signature of SignedData objekt: "+e.getMessage());
+				}				
+			}				
+		}
+		return result;
 	}
 	
 	/* PRIVATE METHODS BELOW */
 	
-	private DefectList getDefectList(SignedData signedData) {
+	private SignerInformation parseSignerInfo() {
+		
+		Iterator<SignerInformation> iterator = cmsSignedData.getSignerInfos().getSigners().iterator();
+
+		this.signerInfo = iterator.next();
+		return signerInfo;
+	}
+	
+	private DefectList parseDefectList() {
 		
 		DefectList defectList = null;
-		
-		ContentInfo contentInfo = signedData.getContentInfo();
-		ASN1ObjectIdentifier id_DefectList =  contentInfo.getContentType();
-		Object content = contentInfo.getContent();
-		
-		if (id_DefectList.equals(BSIObjectIdentifiers.DefectList)) {
 
-			if (content instanceof DEROctetString) {
-				DEROctetString derOctetString = (DEROctetString)content;
-				byte[] octets = derOctetString.getOctets();
-				defectList = DefectList.getInstance(octets);
+		String id_DefectList = cmsSignedData.getSignedContentTypeOID(); 
+		CMSProcessableByteArray content = (CMSProcessableByteArray) cmsSignedData.getSignedContent();
+		
+		if (id_DefectList.equals(BSIObjectIdentifiers.DefectList.toString())) {
+			ByteArrayOutputStream bout = new ByteArrayOutputStream();
+			
+			try {
+				content.write(bout);
+			} catch (IOException | CMSException e) {
+				System.out.println(e.getLocalizedMessage());
 			}
+			
+			byte[] octets = bout.toByteArray();
+			defectList = DefectList.getInstance(octets);
 		}
 		return defectList;
 	}
 
-	private List<Certificate> getDefectListSignerCertificatesFromSignedData(SignedData signedData, CertSelector selector) {
+	
+private List<Certificate> getDefectListSignerCertificates(CMSSignedData signedData) {
 		
 		List<Certificate> result = new ArrayList<Certificate>();
 
 		// The signer certifcate(s)
-		Object certs = signedData.getCertificates(); // signer Certs
-		Collection<Certificate> signerCertificates = getCertificatesFromDERObject(certs, null);
+		Store certStore = signedData.getCertificates();
 		
-		for (Certificate certificate: signerCertificates) {
-			if (selector.match(certificate)) {
-				result.add(certificate);
-			}
-		}
+		JcaX509CertificateConverter converter = new JcaX509CertificateConverter();
+		converter.setProvider("BC");
+		
+		ArrayList<X509CertificateHolder> certificateHolders = (ArrayList<X509CertificateHolder>)certStore.getMatches(null); 
+
+		 for(X509CertificateHolder holder: certificateHolders){
+			try {
+				X509Certificate cert = converter.getCertificate(holder);
+				result.add(cert);
+			} catch (CertificateException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} 
+		 }
 		return result;
 	}
 	
-	private SignedData getSignedDataFromBinary(byte[] binary) {
-
-		List<SignedData> list =  getSignedDataFromDERObject(ASN1Sequence.getInstance(binary),null);
-		if (list.size()>1) System.out.println("More than one SignedData Object available.");
-		if (list.size()>=1) return list.get(0);
-		else return null;
+	private CMSSignedData buildCMSSignedDataFromBinary(byte[] binary) {
+		CMSSignedData signedData =null;
+		try {
+			signedData = new CMSSignedData(binary);
+		} catch (CMSException e) {
+			System.out.println("Could find a SignedData object: "+e.getLocalizedMessage());
+		}
+		return signedData;
 	}
 	
-	private List<SignedData> getSignedDataFromDERObject(Object o, List<SignedData> result) {
-		if (result == null) { result = new ArrayList<SignedData>(); }
-
-		try {
-			SignedData signedData = SignedData.getInstance(o);
-			if (signedData != null) {
-				result.add(signedData);
-			}
-			return result;
-		} catch (Exception e) {
-		}
-
-		if (o instanceof DERTaggedObject) {
-			ASN1Primitive childObject = ((DERTaggedObject)o).getObject();
-			return getSignedDataFromDERObject(childObject, result);
-		} else if (o instanceof ASN1Sequence) {
-			Enumeration<?> derObjects = ((ASN1Sequence)o).getObjects();
-			while (derObjects.hasMoreElements()) {
-				Object nextObject = derObjects.nextElement();
-				result = getSignedDataFromDERObject(nextObject, result);
-			}
-			return result;
-		} else if (o instanceof ASN1Set) {
-			Enumeration<?> derObjects = ((ASN1Set)o).getObjects();
-			while (derObjects.hasMoreElements()) {
-				Object nextObject = derObjects.nextElement();
-				result = getSignedDataFromDERObject(nextObject, result);
-			}
-			return result;
-		} else if (o instanceof DEROctetString) {
-			DEROctetString derOctetString = (DEROctetString)o;
-			byte[] octets = derOctetString.getOctets();
-			ASN1InputStream derInputStream = new ASN1InputStream(new ByteArrayInputStream(octets));
-			try {
-				while (true) {
-					ASN1Primitive derObject = derInputStream.readObject();
-					if (derObject == null) { break; }
-					result = getSignedDataFromDERObject(derObject, result);
-				}
-				derInputStream.close();
-			} catch (IOException ioe) {
-				ioe.printStackTrace();
-			}
-			return result;
-		}
-		return result;
-	}
-
-	
-	private Collection<Certificate> getCertificatesFromDERObject(Object o, Collection<Certificate> certificates) {
-		if (certificates == null) { certificates = new ArrayList<Certificate>(); }
-
-		try {
-			org.bouncycastle.asn1.x509.Certificate certAsASN1Object = org.bouncycastle.asn1.x509.Certificate.getInstance(o);
-			certificates.add(new X509CertificateObject(certAsASN1Object)); // NOTE: BC 1.48
-			return certificates;
-		} catch (Exception e) {
-		}
-
-		if (o instanceof DERTaggedObject) {
-			ASN1Primitive childObject = ((DERTaggedObject)o).getObject();
-			return getCertificatesFromDERObject(childObject, certificates);
-		} else if (o instanceof ASN1Sequence) {
-			Enumeration<?> derObjects = ((ASN1Sequence)o).getObjects();
-			while (derObjects.hasMoreElements()) {
-				Object nextObject = derObjects.nextElement();
-				certificates = getCertificatesFromDERObject(nextObject, certificates);
-			}
-			return certificates;
-		} else if (o instanceof ASN1Set) {
-			Enumeration<?> derObjects = ((ASN1Set)o).getObjects();
-			while (derObjects.hasMoreElements()) {
-				Object nextObject = derObjects.nextElement();
-				certificates = getCertificatesFromDERObject(nextObject, certificates);
-			}
-			return certificates;
-		} else if (o instanceof DEROctetString) {
-			DEROctetString derOctetString = (DEROctetString)o;
-			byte[] octets = derOctetString.getOctets();
-			ASN1InputStream derInputStream = new ASN1InputStream(new ByteArrayInputStream(octets));
-			try {
-				while (true) {
-					ASN1Primitive derObject = derInputStream.readObject();
-					if (derObject == null) { break; }
-					certificates = getCertificatesFromDERObject(derObject, certificates);
-					derInputStream.close();
-				}
-			} catch (IOException ioe) {
-				ioe.printStackTrace();
-			}
-			return certificates;
-		} else if (o instanceof SignedData) {
-			SignedData signedData = (SignedData)o;
-			//			ASN1Set certificatesASN1Set = signedData.getCertificates();
-			//			Enumeration certificatesEnum = certificatesASN1Set.getObjects();
-			//			while (certificatesEnum.hasMoreElements()) {
-			//				Object certificateObject = certificatesEnum.nextElement();
-			//				// TODO: interpret certificateObject, and check signature
-			//			}
-
-			ContentInfo contentInfo = signedData.getContentInfo();
-			Object content = contentInfo.getContent();
-			return getCertificatesFromDERObject(content, certificates);
-		}
-		return certificates;
-	}
 }

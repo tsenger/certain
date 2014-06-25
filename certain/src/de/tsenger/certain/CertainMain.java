@@ -8,13 +8,16 @@ import java.security.Security;
 import java.security.SignatureException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
+import java.security.spec.InvalidKeySpecException;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1ParsingException;
+import org.bouncycastle.eac.EACException;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.operator.OperatorCreationException;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
@@ -37,7 +40,7 @@ import de.tsenger.tools.HexString;
  */
 public class CertainMain {
 	
-	private static final String version = "0.7 build 140327";
+	private static final String version = "0.8b build 140415";
 
 	@Parameter(names = {"--cert","-c"}, variableArity = true, description = "CVCA or DV certificate input files. Parameter can receive multiply values. (e.g. -cert <file1> [<file2> [<file3>] ... ]")
 	public List<String> certFileNames;
@@ -260,9 +263,8 @@ public class CertainMain {
 		if (certFileNames!=null&&!certFileNames.isEmpty()) {
 			String cvcaChrStr = getCvcaChr(dvReq.getCertificateBody().getCarString(), 3);
 			if (cvcaChrStr==null) {
-				System.out.println("Can't find a matching parent CVCA certifcate to this request.");
-			}
-			if (!equalDomainParameters(certStore.getCertByCHR(cvcaChrStr).getBody().getPublicKey(), dvReq.getCertificateBody().getPublicKey())) {
+				System.out.println("Can't find a matching parent CVCA certifcate to this request. Therefore can't check if CVCA DP are equal to Request DP.");
+			} else	if (!equalDomainParameters(certStore.getCertByCHR(cvcaChrStr).getBody().getPublicKey(), dvReq.getCertificateBody().getPublicKey())) {
 				System.out.println("Domain parameters of this request don't match domain parameters of any provided CVCA certificate.");
 			}
 		}
@@ -276,6 +278,7 @@ public class CertainMain {
 			System.out.println("Inner Signature is " + (verifier.hasValidSignature(dvReq) ? "VALID" : "!!! INVALID !!!"));
 		} catch (Exception e) {
 			System.out.println("Verfifier throws exception: " + e.getLocalizedMessage());
+			guessedDpVerify(dvReq.getCertificateBody().getPublicKey());
 		}	
 		
 		if (dvReq.hasOuterSignature()) {
@@ -301,7 +304,11 @@ public class CertainMain {
 							System.out.println("Verfifier throws exception: " + e.getLocalizedMessage());
 						}
 					} else {
-						System.out.println("Can't check outer signature without matching DV and CVCA certifcate.");
+						// Try some well known standard domain parameters...
+
+						guessedDpVerify(outerCarCert.getBody().getPublicKey());
+						
+						
 					}
 					
 				} else if (parentCertRole==CertificateHolderAuthorization.CVCA) { // Outer Car is CVCA cert  
@@ -317,6 +324,85 @@ public class CertainMain {
 				System.out.println("Can't check outer signature without matching parent DV and/or CVCA certifcate.");
 			}
 		} else System.out.println("No outer signature");
+	}
+
+	/** TODO .... 
+	 * @param pubKey
+	 */
+	private void guessedDpVerify(PublicKeyDataObject pubKey) {
+		System.out.println("No Domain Parameters provided via CVCA certifcate but we will try some educated guesses...");
+				
+		boolean result = false;
+		
+		if (pubKey.getUsage().equals(EACObjectIdentifiers.id_TA_ECDSA_SHA_224)) {
+			try {
+				System.out.print("Trying DP brainpool224r1: ");
+				verifier = new CertVerifier("brainpoolp224r1", pubKey);	
+				result = verifier.hasValidOuterSignature(dvReq);
+				System.out.println("signature is " + (result ? "VALID" : "! INVALID !"));
+				if (!result) {
+					System.out.print("Trying DP secp224r1: ");
+					verifier = new CertVerifier("secp224r1", pubKey);	
+					result = verifier.hasValidOuterSignature(dvReq);
+					System.out.println("signature is " + (result ? "VALID" : "! INVALID !"));
+				}
+			} catch (IllegalArgumentException | InvalidKeySpecException | NoSuchProviderException | NoSuchAlgorithmException | EACException | OperatorCreationException e) {
+				System.out.println("failed! Reason: "+e.getLocalizedMessage());
+			}
+		}
+		
+		if (pubKey.getUsage().equals(EACObjectIdentifiers.id_TA_ECDSA_SHA_256)) {
+			try {
+				System.out.print("Trying DP brainpool256r1: ");
+				verifier = new CertVerifier("brainpoolp256r1", pubKey);	
+				result = verifier.hasValidOuterSignature(dvReq);
+				System.out.println("signature is " + (result ? "VALID" : "! INVALID !"));
+				if (!result) {
+					
+				}
+			} catch (IllegalArgumentException | InvalidKeySpecException | NoSuchProviderException | NoSuchAlgorithmException | EACException | OperatorCreationException e) {
+				System.out.println("failed! Reason: "+e.getLocalizedMessage());
+				try {
+					System.out.print("Trying DP secp256r1: ");
+					verifier = new CertVerifier("secp256r1", pubKey);
+					result = verifier.hasValidOuterSignature(dvReq);
+					System.out.println("signature is " + (result ? "VALID" : "! INVALID !"));
+				} catch (InvalidKeySpecException | NoSuchProviderException | NoSuchAlgorithmException | EACException | OperatorCreationException e1) {
+					System.out.println("failed! Reason: "+e1.getLocalizedMessage());
+				}	
+				
+			}
+		}
+		
+		if (pubKey.getUsage().equals(EACObjectIdentifiers.id_TA_ECDSA_SHA_384)) {
+			try {
+				System.out.print("Trying DP brainpool384r1: ");
+				verifier = new CertVerifier("brainpool384r1", pubKey);	
+				result = verifier.hasValidOuterSignature(dvReq);
+				System.out.println("signature is " + (result ? "VALID" : "! INVALID !"));
+				if (!result) {
+					System.out.print("Trying DP secp384r1: ");
+					verifier = new CertVerifier("secp384r1", pubKey);	
+					result = verifier.hasValidOuterSignature(dvReq);
+					System.out.println("signature is " + (result ? "VALID" : "! INVALID !"));
+				}
+			} catch (IllegalArgumentException | InvalidKeySpecException | NoSuchProviderException | NoSuchAlgorithmException | EACException | OperatorCreationException e) {
+				System.out.println("failed! Reason: "+e.getLocalizedMessage());
+			}
+		}
+		
+		if (pubKey.getUsage().equals(EACObjectIdentifiers.id_TA_ECDSA_SHA_512)) {
+			try {
+				System.out.print("Trying DP brainpool512r1: ");
+				verifier = new CertVerifier("brainpool512r1", pubKey);
+				result = verifier.hasValidOuterSignature(dvReq);
+				System.out.println("signature is " + (result ? "VALID" : "! INVALID !"));
+			} catch (IllegalArgumentException | InvalidKeySpecException | NoSuchProviderException | NoSuchAlgorithmException | EACException | OperatorCreationException e) {
+				System.out.println("failed! Reason: "+e.getLocalizedMessage());
+			}
+		}
+
+		if (!result) System.out.println("Out of guesses");
 	}
 	
 	/**

@@ -7,7 +7,7 @@ import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Sequence;
 
-public abstract class PublicKeyDataObject  extends ASN1Object
+public abstract class PublicKeyDataObject extends ASN1Object
 {
 	
 	private static final Hashtable<ASN1ObjectIdentifier, String> AlgorithmNames = new Hashtable<ASN1ObjectIdentifier, String>();

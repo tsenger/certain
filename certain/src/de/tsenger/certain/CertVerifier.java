@@ -14,6 +14,8 @@ import java.util.Hashtable;
 
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.eac.EACException;
+import org.bouncycastle.jce.ECNamedCurveTable;
+import org.bouncycastle.jce.spec.ECNamedCurveParameterSpec;
 import org.bouncycastle.jce.spec.ECParameterSpec;
 import org.bouncycastle.jce.spec.ECPublicKeySpec;
 import org.bouncycastle.math.ec.ECCurve;
@@ -58,6 +60,11 @@ public class CertVerifier {
 	public CertVerifier(PublicKeyDataObject pubKeyObj, PublicKeyDataObject pubKeyObjWithoutDomainParameter) throws InvalidKeySpecException, EACException, NoSuchProviderException, NoSuchAlgorithmException {
 		this.publicKey = getECPublicKeyPublicKey((ECDSAPublicKey)pubKeyObj, (ECDSAPublicKey)pubKeyObjWithoutDomainParameter);
 		this.sig = getSignature(pubKeyObj.getUsage());
+	}
+	
+	public CertVerifier(String namedCurve, PublicKeyDataObject pubKeyObjWithoutDomainParameter) throws InvalidKeySpecException, EACException, NoSuchProviderException, NoSuchAlgorithmException {
+		this.publicKey = getECPublicKeyPublicKey(namedCurve, (ECDSAPublicKey)pubKeyObjWithoutDomainParameter);
+		this.sig = getSignature(pubKeyObjWithoutDomainParameter.getUsage());
 	}
 	
 	public boolean hasValidOuterSignature(CVCertificateRequest req) throws OperatorCreationException, EACException {
@@ -114,6 +121,8 @@ public class CertVerifier {
 			throw new EACException("unable to process signature: " + e.getMessage(), e);
 		}
 	}
+	
+
 
 	private Signature getSignature(ASN1ObjectIdentifier oid) throws NoSuchProviderException, NoSuchAlgorithmException {
 		return createSignature(sigNames.get(oid));
@@ -155,6 +164,25 @@ public class CertVerifier {
 			point = curve.decodePoint(keyWithDP.getPublicPointY());
 		}
 		ECPublicKeySpec pubKeySpec = new ECPublicKeySpec(point, spec);
+
+		KeyFactory factk;
+		try {
+			factk = createKeyFactory("ECDSA");
+		} catch (NoSuchAlgorithmException e) {
+			throw new EACException("cannot find algorithm ECDSA: " + e.getMessage(), e);
+		}
+
+		return factk.generatePublic(pubKeySpec);
+	}
+	
+	private PublicKey getECPublicKeyPublicKey(String namedCurve, ECDSAPublicKey keyWithOutDP) throws EACException, InvalidKeySpecException {
+	    ECNamedCurveParameterSpec params = ECNamedCurveTable.getParameterSpec(namedCurve);
+	    if (params==null) throw new IllegalArgumentException("unknown named curve "+ namedCurve);
+	    ECCurve curve = params.getCurve();
+	    
+	    ECPoint point = curve.decodePoint(keyWithOutDP.getPublicPointY());
+		
+		ECPublicKeySpec pubKeySpec = new ECPublicKeySpec(point, params);
 
 		KeyFactory factk;
 		try {
