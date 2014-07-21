@@ -35,12 +35,12 @@ import de.tsenger.tools.HexString;
 
 /**
  * @author Tobias Senger
- * @version 0.7
+ * @version 0.8b build 140721
  *
  */
 public class CertainMain {
 	
-	private static final String version = "0.8b build 140415";
+	private static final String version = "0.8c build 140721";
 
 	@Parameter(names = {"--cert","-c"}, variableArity = true, description = "CVCA or DV certificate input files. Parameter can receive multiply values. (e.g. -cert <file1> [<file2> [<file3>] ... ]")
 	public List<String> certFileNames;
@@ -207,7 +207,13 @@ public class CertainMain {
 			printBanner(chrStr);
 			if (showFingerprints) printFingerprints(cert);
 			
-			int role = cert.getHolderAuthorizationRole()&0xC0;
+			int role=0;
+			try {
+				role = cert.getHolderAuthorizationRole()&0xC0;
+			} catch (Exception e1) {
+				System.out.println("Couldn't find a CHAT -> No valid certificate!");
+				return;
+			}
 			if (role==CertificateHolderAuthorization.CVCA) {
 				//TODO this is a CVCA, is there anything to do?
 			}
