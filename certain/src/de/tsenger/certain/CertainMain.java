@@ -41,6 +41,8 @@ import de.tsenger.tools.HexString;
 public class CertainMain {
 	
 	private static final String version = "0.8c build 140721";
+	
+	private static JCommander jcmdr;
 
 	@Parameter(names = {"--cert","-c"}, variableArity = true, description = "CVCA or DV certificate input files. Parameter can receive multiply values. (e.g. -cert <file1> [<file2> [<file3>] ... ]")
 	public List<String> certFileNames;
@@ -82,7 +84,9 @@ public class CertainMain {
 		Security.addProvider(new BouncyCastleProvider());
 		CertainMain cm = new CertainMain();
 		
-		final JCommander jcmdr = new JCommander(cm);
+		jcmdr = new JCommander(cm);
+		jcmdr.setProgramName("certain");
+		
 		try {
 			jcmdr.parse(args);
 			if (args.length==0) throw new ParameterException("No arguments given");
@@ -90,7 +94,6 @@ public class CertainMain {
 		} catch (ParameterException e) {
 			// handling of wrong arguments
 			System.out.println(e.getMessage());
-			jcmdr.setProgramName("certain");
 			jcmdr.usage();
 		}
 	}
@@ -99,7 +102,7 @@ public class CertainMain {
 	 * 
 	 */
 	public void run() {
-		if (help) System.out.println(new String(data));
+		if (help) jcmdr.usage();
 		
 		readFilesAndGetInstances();
 		cvParser = new CertParser();
@@ -614,8 +617,5 @@ public class CertainMain {
 		}
 		return false;
 	}	
-	
-	private final byte[] data = new byte[] {0x54,0x68,0x65,0x72,0x65,0x20,0x69,0x73,0x20,0x6E,0x6F,0x20,0x68,0x65,0x6C,0x70,0x21,0x20,0x41,0x73,0x6B,0x20,0x54,0x6F,0x62,0x69,0x61,0x73,0x20,0x3A,0x29};
-	
 
 }
