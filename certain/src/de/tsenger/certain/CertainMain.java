@@ -36,7 +36,7 @@ import de.tsenger.tools.HexString;
  */
 public class CertainMain {
 	
-	private static final String version = "0.8d build 140828";
+	private static final String version = "0.8e build 141218";
 	
 	private static JCommander jcmdr;
 
