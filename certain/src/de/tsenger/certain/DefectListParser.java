@@ -138,7 +138,7 @@ public class DefectListParser {
 				String issuerDN = x509Cert.getIssuerDN().toString();
 				
 				sw.write("Subject DN: "+subjectDN+"\n");
-				sw.write("Issuer DN:  "+issuerDN+"\n");
+				sw.write("Issuer  DN:  "+issuerDN+"\n");
 				DEROctetString oct = (DEROctetString) DEROctetString.getInstance(x509Cert.getExtensionValue("2.5.29.14"));
 				SubjectKeyIdentifier skid = SubjectKeyIdentifier.getInstance(oct.getOctets());
 				sw.write("X509 SubjectKeyIdentifier: "+HexString.bufferToHex(skid.getKeyIdentifier())+"\n");
@@ -317,7 +317,7 @@ public class DefectListParser {
 	}
 
 	
-private List<Certificate> getDefectListSignerCertificates(CMSSignedData signedData) {
+	private List<Certificate> getDefectListSignerCertificates(CMSSignedData signedData) {
 		
 		List<Certificate> result = new ArrayList<Certificate>();
 

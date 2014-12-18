@@ -7,8 +7,6 @@ import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.ASN1Set;
 import org.bouncycastle.asn1.BERSequence;
-import org.bouncycastle.asn1.DEROctetString;
-import org.bouncycastle.asn1.DLSet;
 import org.bouncycastle.asn1.cms.SignerIdentifier;
 
 
@@ -27,8 +25,8 @@ import org.bouncycastle.asn1.cms.SignerIdentifier;
 public class Defect extends ASN1Object {
 	
 	private SignerIdentifier signerId;
-	private DEROctetString certificateHash;
-	private DLSet knownDefects;
+	private ASN1OctetString certificateHash;
+	private ASN1Set knownDefects;
 	
 	private Defect(ASN1Sequence seq) {
 		
@@ -41,11 +39,11 @@ public class Defect extends ASN1Object {
 		signerId = SignerIdentifier.getInstance(seq.getObjectAt(index++));
 		
 		if (seq.getObjectAt(index) instanceof ASN1OctetString) {
-			certificateHash = (DEROctetString) DEROctetString.getInstance(seq.getObjectAt(index++));
+			certificateHash = ASN1OctetString.getInstance(seq.getObjectAt(index++));
 		}
 		
 		if (seq.getObjectAt(index) instanceof ASN1Set) {
-			knownDefects = (DLSet) DLSet.getInstance(seq.getObjectAt(index++));
+			knownDefects = ASN1Set.getInstance(seq.getObjectAt(index++));
 		} 
 	}
 	
@@ -81,11 +79,11 @@ public class Defect extends ASN1Object {
 		return signerId;
 	}
 	
-	public DEROctetString getCertificateHash() {
+	public ASN1OctetString getCertificateHash() {
 		return certificateHash;
 	}
 	
-	public DLSet getKnownDefects() {
+	public ASN1Set getKnownDefects() {
 		return knownDefects;
 	}
 

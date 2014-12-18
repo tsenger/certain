@@ -1,13 +1,9 @@
 package de.tsenger.certain;
 
 import java.io.IOException;
-import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.Security;
-import java.security.SignatureException;
-import java.security.cert.Certificate;
-import java.security.cert.CertificateException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -35,12 +31,12 @@ import de.tsenger.tools.HexString;
 
 /**
  * @author Tobias Senger
- * @version 0.8b build 140721
+ * @version 0.8e build 141218
  *
  */
 public class CertainMain {
 	
-	private static final String version = "0.8c build 140721";
+	private static final String version = "0.8d build 140828";
 	
 	private static JCommander jcmdr;
 
@@ -53,8 +49,8 @@ public class CertainMain {
 	@Parameter(names = {"--linkcert","-l"}, description = "Link certificate input file to new CVCA")
 	private String linkCertFileName;
 	
-//	@Parameter(names = {"--masterlist","-ml"}, description = "CVCA Master List")
-//	private String masterListFileName;
+	@Parameter(names = {"--masterlist","-ml"}, description = "CVCA Master List")
+	private String masterListFileName;
 	
 	@Parameter(names = {"--defectlist","-dl"}, description = "shows all defects in the given Defect List")
 	private String defectListFileName;
@@ -178,14 +174,14 @@ public class CertainMain {
 			}	
 		}
 		
-//		if (masterListFileName!=null) {
-//			try {
-//				tempBytes = FileSystem.readFile(masterListFileName);
-//				mlParser = new MasterListParser(tempBytes);			
-//			} catch (Exception e) {
-//				System.err.println("Error while open file "+e.getMessage());
-//			}	
-//		}
+		if (masterListFileName!=null) {
+			try {
+				tempBytes = FileSystem.readFile(masterListFileName);
+				mlParser = new MasterListParser(tempBytes);			
+			} catch (Exception e) {
+				System.err.println("Error while open file "+e.getMessage());
+			}	
+		}
 		
 		if (defectListFileName!=null) {
 			try {
@@ -301,7 +297,7 @@ public class CertainMain {
 			if (outerCarCert!=null) {
 				// If outer CAR is a DV cert get the matching CVCA cert
 				int parentCertRole = outerCarCert.getHolderAuthorizationRole()&0xC0;
-				if (parentCertRole==CertificateHolderAuthorization.DV_OFFICIAL_DOMESTIC||parentCertRole==CertificateHolderAuthorization.DV_NON_OFFICIAL_FOREIGN) {
+				if (parentCertRole==CertificateHolderAuthorization.DV_OFFICIAL_DOMESTIC||parentCertRole==CertificateHolderAuthorization.DV_NON_OFFICIAL_FOREIGN||parentCertRole==CertificateHolderAuthorization.TERMINAL) {
 					String cvcaChrString = getCvcaChr(outerCarString,3);
 					CVCertificate cvcaCert = certStore.getCertByCHR(cvcaChrString);
 					
@@ -454,45 +450,15 @@ public class CertainMain {
 	/**
 	 * Show Master List Infos
 	 */
-	private void printMasterListInfo() {
-		List<Certificate> cscaCerts = mlParser.getCSCACertificates();
-		List<Certificate> signerCerts = mlParser.getMasterListSignerCertificates();
-		int i=0;
-		
-		System.out.println("Master List contains "+cscaCerts.size()+" CSCA certificates. \nThis Master has "+signerCerts.size()+" Master List Signers");
-		
-		for (Certificate cert : cscaCerts) {
-			printBanner("CSCA Cert no."+(++i));
-			try {
-				cert.verify(cert.getPublicKey());
-				System.out.println("Signature is valid");
-			} catch (InvalidKeyException e) {
-				// TODO Auto-generated catch block
-				System.out.println(e.getMessage());
-			} catch (CertificateException e) {
-				// TODO Auto-generated catch block
-				System.out.println(e.getMessage());
-			} catch (NoSuchAlgorithmException e) {
-				// TODO Auto-generated catch block
-				System.out.println(e.getMessage());
-			} catch (NoSuchProviderException e) {
-				// TODO Auto-generated catch block
-				System.out.println(e.getMessage());
-			} catch (SignatureException e) {
-				// TODO Auto-generated catch block
-				System.out.println(e.getMessage());
-			}
-		}
-		    
+	private void printMasterListInfo() { //TODO cleanup and print more details 
+		System.out.println(mlParser.getMasterListInfoString(showDetails));		    
 	}
 	
 	/**
 	 * Show Defect List Infos
 	 */
 	private void printDefectListInfo() {
-		
-		System.out.println(dlParser.getDefectListInfoString(showDetails));
-		    
+		System.out.println(dlParser.getDefectListInfoString(showDetails));  
 	}
 	
 
