@@ -20,7 +20,7 @@ public class EACTags
     public static final int APPLICATION_LABEL             				= 0x50;
     public static final int FILE_REFERENCE             					= 0x51;
     public static final int COMMAND_TO_PERFORM             				= 0x52;
-    public static final int DISCRETIONARY_DATA             				= 0x53;
+    public static final int DISCRETIONARY_DATA             				= 0x13; //0x53
     public static final int OFFSET_DATA_OBJECT             				= 0x54;
     public static final int TRACK1_APPLICATION             				= 0x56;
     public static final int TRACK2_APPLICATION             				= 0x57;
@@ -93,7 +93,7 @@ public class EACTags
     public static final int APPLICATION_IMAGE_TEMPLATE             			= 0x6D;
     public static final int APPLICATION_RELATED_DATA             			= 0x6E;
     public static final int FCI_TEMPLATE             						= 0x6F;
-    public static final int DISCRETIONARY_DATA_OBJECTS             			= 0x73;
+    public static final int DISCRETIONARY_DATA_TEMPLATE             		= 0x13; //0x73
     public static final int COMPATIBLE_TAG_ALLOCATION_AUTHORITY           	= 0x78;
     public static final int COEXISTANT_TAG_ALLOCATION_AUTHORITY             = 0x79;
     public static final int SECURITY_SUPPORT_TEMPLATE             			= 0x7A;
@@ -103,18 +103,18 @@ public class EACTags
     public static final int NON_INTERINDUSTRY_DATA_OBJECT_NESTING_TEMPLATE 	= 0x7E;
     public static final int DISPLAY_CONTROL         						= 0x7F20;
     public static final int CARDHOLDER_CERTIFICATE           				= 0x21; // 0x7F21;
-    public static final int CV_CERTIFICATE			           			= 0x7F21;
     public static final int CARDHOLER_REQUIREMENTS_INCLUDED_FEATURES     	= 0x7F22;
     public static final int CARDHOLER_REQUIREMENTS_EXCLUDED_FEATURES 	 	= 0x7F23;
     public static final int BIOMETRIC_DATA_TEMPLATE             			= 0x7F2E;
     public static final int DIGITAL_SIGNATURE_BLOCK             			= 0x7F3D;
     public static final int CARDHOLDER_PRIVATE_KEY_TEMPLATE             	= 0x7F48;
-    public static final int PUBLIC_KEY         					    	= 0x49; // 0x7F49;
+    public static final int PUBLIC_KEY         					    		= 0x49; // 0x7F49;
     public static final int CERTIFICATE_HOLDER_AUTHORIZATION_TEMPLATE		= 0x4C; // 0x7F4C;
     public static final int CERTIFICATE_CONTENT_TEMPLATE             		= 0x4E; // 0x7F4E;
     public static final int CERTIFICATE_BODY			             		= 0x4E; // 0x7F4E;
-    public static final int BIOMETRIC_INFORMATION_TEMPLATE             	= 0x7F60;
-    public static final int BIOMETRIC_INFORMATION_GROUP_TEMPLATE         = 0x7F61;
+    public static final int BIOMETRIC_INFORMATION_TEMPLATE             		= 0x7F60;
+    public static final int BIOMETRIC_INFORMATION_GROUP_TEMPLATE         	= 0x7F61;
+	public static final int CERTIFICATE_EXTENSIONS 							= 0x65;
         
     public static int getTag(int encodedTag) {
     	/*

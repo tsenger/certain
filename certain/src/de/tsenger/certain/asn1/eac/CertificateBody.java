@@ -109,6 +109,9 @@ public class CertificateBody  extends ASN1Object
             case EACTags.CERTIFICATE_EXPIRATION_DATE:
                 setCertificateExpirationDate(aSpe);
                 break;
+            case EACTags.CERTIFICATE_EXTENSIONS:
+            	setCertificateExtensions(aSpe);
+            	break;
             default:
                 certificateType = 0;
                 throw new IOException("Not a valid iso7816 DERApplicationSpecific tag " + aSpe.getApplicationTag());
@@ -117,7 +120,12 @@ public class CertificateBody  extends ASN1Object
         aIS.close();
     }
 
-    /**
+    private void setCertificateExtensions(DERApplicationSpecific aSpe) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	/**
      * builds an Iso7816CertificateBody by settings each parameters.
      *
      * @param certificateProfileIdentifier
