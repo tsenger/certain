@@ -1,6 +1,7 @@
 //package org.bouncycastle.asn1.eac;
 package de.tsenger.certain.asn1.eac;
 
+import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Enumeration;
 
@@ -10,6 +11,7 @@ import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.ASN1TaggedObject;
+import org.bouncycastle.asn1.DERApplicationSpecific;
 import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DERTaggedObject;
@@ -261,9 +263,17 @@ public class ECDSAPublicKey extends PublicKeyDataObject {
 
 	@Override
 	public ASN1Primitive toASN1Primitive() {
-		if (getPrimeModulusP() != null) //Only CVCA certificates contain full public key with Domain Parameters
-			return new DERSequence(getASN1EncodableVector(usage, false));
-		else // DV and Terminal certificates MUST NOT contain domain parameters
-			return new DERSequence(getASN1EncodableVector(usage, true));
+		if (getPrimeModulusP() != null)
+			try {
+				return new DERApplicationSpecific(false, EACTags.PUBLIC_KEY, new DERSequence(getASN1EncodableVector(usage, false)));
+			} catch (IOException e) {
+				throw new IllegalStateException("unable to convert public key to DERApplicationSpecific!");
+			}
+		else
+			try {
+				return new DERApplicationSpecific(false, EACTags.PUBLIC_KEY, new DERSequence(getASN1EncodableVector(usage, true)));
+			} catch (IOException e) {
+				throw new IllegalStateException("unable to convert public key to DERApplicationSpecific!");
+			}
 	}
 }

@@ -165,11 +165,11 @@ public class CertificateHolderAuthorization
      * @param rights specifies the access rights
      * @throws IOException
      */
-    public CertificateHolderAuthorization(ASN1ObjectIdentifier oid, int rights)
+    public CertificateHolderAuthorization(ASN1ObjectIdentifier oid, byte[] rights)
         throws IOException
     {
         setOid(oid);
-        setAccessRights((byte)rights);
+        setAccessRights(rights);
     }
 
     /**
@@ -214,23 +214,9 @@ public class CertificateHolderAuthorization
      *
      * @param rights byte containing the rights.
      */
-    private void setAccessRights(long rights)
+    private void setAccessRights(byte[] rights)
     {
-    	byte[] accessRights;
-    	if (oid.equals(id_IS)||oid.equals(id_ST)) {
-    		accessRights = new byte[1];
-    		accessRights[0] = (byte) rights;
-    	} else {
-    		accessRights = new byte[5];;
-    		accessRights[0] = (byte) (rights >>> 32);
-    		accessRights[1] = (byte) (rights >>> 24);
-    		accessRights[2] = (byte) (rights >>> 16);
-    		accessRights[3] = (byte) (rights >>> 8);
-    		accessRights[4] = (byte) (rights);
-    	}
-    	
-        this.accessRights = new DERApplicationSpecific(
-            EACTags.getTag(EACTags.DISCRETIONARY_DATA), accessRights);
+       	this.accessRights = new DERApplicationSpecific(EACTags.getTag(EACTags.DISCRETIONARY_DATA), rights);
     }
 
     /**

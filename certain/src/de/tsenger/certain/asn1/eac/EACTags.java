@@ -7,15 +7,15 @@ import org.bouncycastle.asn1.DERApplicationSpecific;
 public class EACTags
 {
 	public static final int OBJECT_IDENTIFIER         					= 0x06;
-    public static final int COUNTRY_CODE_NATIONAL_DATA              		= 0x41;
+    public static final int COUNTRY_CODE_NATIONAL_DATA              	= 0x41;
     public static final int CERTIFICATION_AUTHORITY_REFERENCE 			= 0x02; //0x42;
     public static final int CARD_SERVICE_DATA             				= 0x43;
-    public static final int INITIAL_ACCESS_DATA             				= 0x44;
-    public static final int CARD_ISSUER_DATA             					= 0x45;
-    public static final int PRE_ISSUING_DATA             					= 0x46;
+    public static final int INITIAL_ACCESS_DATA             			= 0x44;
+    public static final int CARD_ISSUER_DATA             				= 0x45;
+    public static final int PRE_ISSUING_DATA             				= 0x46;
     public static final int CARD_CAPABILITIES             				= 0x47;
     public static final int STATUS_INFORMATION             				= 0x48;
-    public static final int EXTENDED_HEADER_LIST             				= 0x4D;
+    public static final int EXTENDED_HEADER_LIST             			= 0x4D;
     public static final int APPLICATION_IDENTIFIER             			= 0x4F;
     public static final int APPLICATION_LABEL             				= 0x50;
     public static final int FILE_REFERENCE             					= 0x51;
@@ -26,41 +26,41 @@ public class EACTags
     public static final int TRACK2_APPLICATION             				= 0x57;
     public static final int TRACK3_APPLICATION             				= 0x58;
     public static final int CARD_EXPIRATION_DATA             				= 0x59;
-    public static final int PRIMARY_ACCOUNT_NUMBER             			= 0x5A;// PAN
+    public static final int PRIMARY_ACCOUNT_NUMBER             				= 0x5A;// PAN
     public static final int NAME             								= 0x5B;
     public static final int TAG_LIST             							= 0x5C;
     public static final int HEADER_LIST             						= 0x5D;
-    public static final int LOGIN_DATA             						= 0x5E;
+    public static final int LOGIN_DATA             							= 0x5E;
     public static final int CERTIFICATE_HOLDER_REFERENCE             		= 0x20; // 0x5F20;
     public static final int TRACK1_CARD             						= 0x5F21;
     public static final int TRACK2_CARD             						= 0x5F22;
     public static final int TRACK3_CARD             						= 0x5F23;
     public static final int CERTIFICATE_EXPIRATION_DATE             		= 0x24; // 0x5F24;
-    public static final int CERTIFICATE_EFFECTIVE_DATE             		= 0x25; // 0x5F25;
+    public static final int CERTIFICATE_EFFECTIVE_DATE             			= 0x25; // 0x5F25;
     public static final int CARD_EFFECTIVE_DATE             				= 0x5F26;
     public static final int INTERCHANGE_CONTROL             				= 0x5F27;
     public static final int COUNTRY_CODE             						= 0x5F28;
-    public static final int CERTIFICATE_PROFILE_IDENTIFIER             	= 0x29; // 0x5F29;
-    public static final int CURRENCY_CODE             					= 0x5F2A;
-    public static final int DATE_OF_BIRTH             					= 0x5F2B;
-    public static final int CARDHOLDER_NATIONALITY             			= 0x5F2C;
+    public static final int CERTIFICATE_PROFILE_IDENTIFIER             		= 0x29; // 0x5F29;
+    public static final int CURRENCY_CODE             						= 0x5F2A;
+    public static final int DATE_OF_BIRTH             						= 0x5F2B;
+    public static final int CARDHOLDER_NATIONALITY             				= 0x5F2C;
     public static final int LANGUAGE_PREFERENCES             				= 0x5F2D;
-    public static final int CARDHOLDER_BIOMETRIC_DATA             		= 0x5F2E;
+    public static final int CARDHOLDER_BIOMETRIC_DATA             			= 0x5F2E;
     public static final int PIN_USAGE_POLICY             					= 0x5F2F;
     public static final int SERVICE_CODE             						= 0x5F30;
     public static final int TRANSACTION_COUNTER             				= 0x5F32;
     public static final int TRANSACTION_DATE             					= 0x5F33;
     public static final int CARD_SEQUENCE_NUMBER							= 0x5F34;
-    public static final int SEX											= 0x5F35;
+    public static final int SEX												= 0x5F35;
     public static final int CURRENCY_EXPONENT								= 0x5F36;
-    public static final int STATIC_INTERNAL_AUTHENTIFICATION_ONE_STEP 	= 0x37; // 0x5F37;
+    public static final int STATIC_INTERNAL_AUTHENTIFICATION_ONE_STEP 		= 0x37; // 0x5F37;
     public static final int SIGNATURE								 		= 0x5F37;
-    public static final int STATIC_INTERNAL_AUTHENTIFICATION_FIRST_DATA	= 0x5F38;
+    public static final int STATIC_INTERNAL_AUTHENTIFICATION_FIRST_DATA		= 0x5F38;
     public static final int STATIC_INTERNAL_AUTHENTIFICATION_SECOND_DATA	= 0x5F39;
     public static final int DYNAMIC_INTERNAL_AUTHENTIFICATION            	= 0x5F3A;
     public static final int DYNAMIC_EXTERNAL_AUTHENTIFICATION            	= 0x5F3B;
     public static final int DYNAMIC_MUTUAL_AUTHENTIFICATION             	= 0x5F3C;
-    public static final int CARDHOLDER_PORTRAIT_IMAGE             		= 0x5F40;
+    public static final int CARDHOLDER_PORTRAIT_IMAGE             			= 0x5F40;
     public static final int ELEMENT_LIST             						= 0x5F41;
     public static final int ADDRESS             							= 0x5F42;
     public static final int CARDHOLDER_HANDWRITTEN_SIGNATURE             	= 0x5F43;
@@ -114,7 +114,7 @@ public class EACTags
     public static final int CERTIFICATE_BODY			             		= 0x4E; // 0x7F4E;
     public static final int BIOMETRIC_INFORMATION_TEMPLATE             		= 0x7F60;
     public static final int BIOMETRIC_INFORMATION_GROUP_TEMPLATE         	= 0x7F61;
-	public static final int CERTIFICATE_EXTENSIONS 							= 0x65;
+	public static final int CERTIFICATE_EXTENSIONS 							= 0x05; //0x65
         
     public static int getTag(int encodedTag) {
     	/*

@@ -36,6 +36,8 @@ import org.bouncycastle.asn1.DEROctetString;
  *      CertificateEffectiveDate			DERApplicationSpecific,
  *      // the date after wich the certificate expires
  *      certificateExpirationDate			DERApplicationSpecific
+ *      // certificates may contain extension
+ *      certificateExtensions				CertificateExtensions
  *  }
  * </pre>
  */
@@ -49,6 +51,7 @@ public class CertificateBody  extends ASN1Object
     private CertificateHolderAuthorization certificateHolderAuthorization;// Encodes the role of the holder (i.e. CVCA, DV, IS) and assigns read/write access rights to data groups storing sensitive data
     private DERApplicationSpecific certificateEffectiveDate;// the date of the certificate generation
     private DERApplicationSpecific certificateExpirationDate;// the date after wich the certificate expires
+    private CertificateExtensions certificateExtensions;
     private int certificateType = 0;// bit field of initialized data. This will tell us if the data are valid.
     private static final int CPI = 0x01;//certificate Profile Identifier
     private static final int CAR = 0x02;//certification Authority Reference
@@ -57,6 +60,7 @@ public class CertificateBody  extends ASN1Object
     private static final int CHA = 0x10;//certificate Holder Authorization
     private static final int CEfD = 0x20;//certificate Effective Date
     private static final int CExD = 0x40;//certificate Expiration Date
+    private static final int CeEx = 0x80;//certificate Extensions
 
     public static final int profileType = 0x7f;//Profile type Certificate
     public static final int requestTypeWithoutCAR = 0x0D;// Request type Certificate without CAR
@@ -120,11 +124,6 @@ public class CertificateBody  extends ASN1Object
         aIS.close();
     }
 
-    private void setCertificateExtensions(DERApplicationSpecific aSpe) {
-		// TODO Auto-generated method stub
-		
-	}
-
 	/**
      * builds an Iso7816CertificateBody by settings each parameters.
      *
@@ -136,6 +135,7 @@ public class CertificateBody  extends ASN1Object
      * @param certificateHolderAuthorization
      * @param certificateEffectiveDate
      * @param certificateExpirationDate
+     * @param certificateExtensions
      * @throws IOException
      */
     public CertificateBody(DERApplicationSpecific certificateProfileIdentifier,
@@ -144,7 +144,8 @@ public class CertificateBody  extends ASN1Object
     		CertificateHolderReference certificateHolderReference,
     		CertificateHolderAuthorization certificateHolderAuthorization,
     		PackedDate certificateEffectiveDate,
-    		PackedDate certificateExpirationDate) {
+    		PackedDate certificateExpirationDate,
+    		CertificateExtensions certificateExtensions) {
     	
         setCertificateProfileIdentifier(certificateProfileIdentifier);
         setCertificationAuthorityReference(new DERApplicationSpecific(EACTags.CERTIFICATION_AUTHORITY_REFERENCE, certificationAuthorityReference.getEncoded()));
@@ -158,6 +159,7 @@ public class CertificateBody  extends ASN1Object
         catch (IOException e) {
             throw new IllegalArgumentException("unable to encode dates: " + e.getMessage());
         }
+        this.certificateExtensions = certificateExtensions;
     }
 
     /**
@@ -178,18 +180,19 @@ public class CertificateBody  extends ASN1Object
      * @return return the "profile" type certificate body.
      * @throws IOException if the DERApplicationSpecific cannot be created.
      */
-    private ASN1Primitive profileToASN1Object()
+	private ASN1Primitive profileToASN1Object()
         throws IOException
     {
         ASN1EncodableVector v = new ASN1EncodableVector();
 
         v.add(certificateProfileIdentifier);
         v.add(certificationAuthorityReference);
-        v.add(new DERApplicationSpecific(false, EACTags.PUBLIC_KEY, publicKey));
+        v.add(publicKey);
         v.add(certificateHolderReference);
         v.add(certificateHolderAuthorization);
         v.add(certificateEffectiveDate);
         v.add(certificateExpirationDate);
+        if (certificateExtensions!=null) v.add(certificateExtensions);
         return new DERApplicationSpecific(EACTags.CERTIFICATE_CONTENT_TEMPLATE, v);
     }
 
@@ -251,7 +254,7 @@ public class CertificateBody  extends ASN1Object
 
         v.add(certificateProfileIdentifier);
         if (certificationAuthorityReference!=null) v.add(certificationAuthorityReference);
-        v.add(new DERApplicationSpecific(false, EACTags.PUBLIC_KEY, publicKey));
+        v.add(publicKey);
         v.add(certificateHolderReference);
         return new DERApplicationSpecific(EACTags.CERTIFICATE_CONTENT_TEMPLATE, v);
     }
@@ -314,6 +317,33 @@ public class CertificateBody  extends ASN1Object
 
         return null;
     }
+    
+    /**
+     * @return the certificate extensions
+     */
+    public CertificateExtensions getCertificateExtensions() {
+    	if ((this.certificateType & CertificateBody.CeEx) == CertificateBody.CeEx)
+            {
+                return certificateExtensions;
+            }
+            return null;
+    }
+
+    /**
+     * set the certificate extensions
+     * @param cext CertificateExtensions object
+     * @throws IOException
+     */
+    private void setCertificateExtensions(DERApplicationSpecific cext) throws IOException {
+    	if (cext.getApplicationTag() == EACTags.CERTIFICATE_EXTENSIONS) {
+    		this.certificateExtensions = CertificateExtensions.getInstance(cext);
+    		certificateType |= CeEx;
+    	}
+    	else {
+    		throw new IllegalArgumentException("Not an CERTIFICATE_EXTENSIONS tag :" + EACTags.encodeTag(cext));
+    	}
+		
+	}
 
     /**
      * @return the date of the certificate generation

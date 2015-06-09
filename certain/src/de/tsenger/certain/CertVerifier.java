@@ -8,6 +8,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PublicKey;
 import java.security.Signature;
+import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.RSAPublicKeySpec;
 import java.util.Hashtable;
@@ -33,6 +34,7 @@ public class CertVerifier {
 
 	private final PublicKey publicKey;
 	private final Signature sig;
+	private byte[] signatureBytes;
 	private static final Hashtable<ASN1ObjectIdentifier, String> sigNames = new Hashtable<ASN1ObjectIdentifier, String>();
 
 	static {
@@ -50,8 +52,7 @@ public class CertVerifier {
 		sigNames.put(EACObjectIdentifiers.id_TA_ECDSA_SHA_512, "SHA512withCVC-ECDSA");
 	}
 	
-
-
+	
 	public CertVerifier(PublicKeyDataObject pubKeyObj) throws InvalidKeySpecException, EACException, NoSuchProviderException, NoSuchAlgorithmException {
 		this.publicKey = convertPublicKey(pubKeyObj);
 		this.sig = getSignature(pubKeyObj.getUsage());
@@ -67,6 +68,10 @@ public class CertVerifier {
 		this.sig = getSignature(pubKeyObjWithoutDomainParameter.getUsage());
 	}
 	
+
+	
+	
+
 	public boolean hasValidOuterSignature(CVCertificateRequest req) throws OperatorCreationException, EACException {
 		try {
 			byte[] reqData = req.getEncoded();	
@@ -106,18 +111,17 @@ public class CertVerifier {
 			throw new EACException("unable to process signature: " + e.getMessage(), e);
 		}
 	}
-
+		
 	private boolean verify(byte[] data, byte[] signatureBytes) throws OperatorCreationException, EACException {
 		try {
 			sig.initVerify(publicKey);
-//			System.out.println(HexString.bufferToHex(publicKey.getEncoded()));
 		} catch (InvalidKeyException e) {
 			throw new OperatorCreationException("invalid key: " + e.getMessage(), e);
 		}
 		try {			
 			sig.update(data);
 			return sig.verify(signatureBytes);
-		} catch (Exception e) {
+		} catch (SignatureException e) {
 			throw new EACException("unable to process signature: " + e.getMessage(), e);
 		}
 	}

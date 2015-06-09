@@ -8,12 +8,20 @@ import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1Primitive;
-import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.DERApplicationSpecific;
+import org.bouncycastle.asn1.DERSequence;
 
 public class CertificateExtensions extends ASN1Object {
 	
 	private List<DiscretionaryDataTemplate> DiscretionaryDataTemplateList = new ArrayList<DiscretionaryDataTemplate>(5);
+	
+	public CertificateExtensions() {
+		
+	}
+	
+	public CertificateExtensions(DiscretionaryDataTemplate ddt) {
+		this.DiscretionaryDataTemplateList.add(ddt);
+	}
 	
 	private CertificateExtensions(DERApplicationSpecific appSpe)
 	        throws IOException
@@ -46,7 +54,7 @@ public class CertificateExtensions extends ASN1Object {
                 throw new IOException("Not a valid iso7816 content : not a DERApplicationSpecific Object :" + EACTags.encodeTag(appSpe) + obj.getClass());           
             }
             if (aSpe.getApplicationTag()==EACTags.DISCRETIONARY_DATA_TEMPLATE) {
-	            addDiscretionaryDataTemplate(aSpe);
+	            addDiscretionaryDataTemplate(DiscretionaryDataTemplate.getInstance(aSpe));
             }
             else {
             	aIS.close();
@@ -57,8 +65,8 @@ public class CertificateExtensions extends ASN1Object {
 		
 	}
 
-	public void addDiscretionaryDataTemplate(DERApplicationSpecific aSpe) throws IOException {
-		DiscretionaryDataTemplateList.add(DiscretionaryDataTemplate.getInstance(aSpe));		
+	public void addDiscretionaryDataTemplate(DiscretionaryDataTemplate ddt) throws IOException {
+		DiscretionaryDataTemplateList.add(ddt);		
 	}
 	
 	public List<DiscretionaryDataTemplate> getDiscretionaryDataTemplateList() {
@@ -73,7 +81,11 @@ public class CertificateExtensions extends ASN1Object {
 			v.add(item);
 		}
 		
-		return ASN1Sequence.getInstance(v);
+		try {
+			return new DERApplicationSpecific(false, EACTags.CERTIFICATE_EXTENSIONS, new DERSequence(v));
+		} catch (IOException e) {
+			throw new IllegalStateException("unable to convert Certificate Extensions");
+		}
 	}
 	
 	public static CertificateExtensions getInstance(Object appSpe)
