@@ -28,6 +28,7 @@
         		org/bouncycastle/jcajce/provider/asymmetric/RSA.java
         		org/bouncycastle/jcajce/provider/asymmetric/ec/* 
         		org/bouncycastle/jcajce/provider/asymmetric/rsa/*" 
+        	excludes="de/tsenger/certain/junit/**"
         	destdir="${class.dir}" 
         	includeAntRuntime="false"
         	source="1.7"

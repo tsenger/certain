@@ -8,6 +8,7 @@ import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.DERApplicationSpecific;
+import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DERTaggedObject;
 
@@ -61,7 +62,7 @@ public class DiscretionaryDataTemplate extends ASN1Object {
 					DERTaggedObject aSpe = (DERTaggedObject) tmpObj;
 					//Tag 0x80 and 0x81 are valid tags here
 					if (aSpe.getTagNo() == 0x00 || aSpe.getTagNo() == 0x01) {
-						dataContent = aSpe.getObject().getEncoded();
+						dataContent = ((DEROctetString) aSpe.getObject()).getOctets();
 					} else {
 						content.close();
 						throw new IOException("Invalid Object, no valid data");
