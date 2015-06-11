@@ -5,9 +5,11 @@ import java.io.StringWriter;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 
 import de.tsenger.certain.asn1.eac.CertificateBody;
+import de.tsenger.certain.asn1.eac.CertificateExtensions;
 import de.tsenger.certain.asn1.eac.CertificateHolderAuthorization;
 import de.tsenger.certain.asn1.eac.CertificateHolderReference;
 import de.tsenger.certain.asn1.eac.CertificationAuthorityReference;
+import de.tsenger.certain.asn1.eac.DiscretionaryDataTemplate;
 import de.tsenger.certain.asn1.eac.EACObjectIdentifiers;
 import de.tsenger.certain.asn1.eac.ECDSAPublicKey;
 import de.tsenger.certain.asn1.eac.PackedDate;
@@ -28,6 +30,7 @@ public class CertParser {
 	private CertificateHolderAuthorization chat;
 	private PackedDate effdate;
 	private PackedDate expdate;
+	private CertificateExtensions extensions;
 	
 	boolean isCertificate;
 	boolean showDetails=false;
@@ -42,6 +45,7 @@ public class CertParser {
 	private String authorizationStr;
 	private String effdateStr;
 	private String expdateStr;
+	private String extentensionsStr;
 
 	
 	public void setBody(CertificateBody body, boolean isCertificate){
@@ -70,7 +74,8 @@ public class CertParser {
 		authorizationBitStr = null;
 		authorizationStr = null;
 		effdateStr = null;
-		expdateStr = null;		
+		expdateStr = null;	
+		extensions = null;
 	}
 	
 	private void parse()  {
@@ -154,6 +159,17 @@ public class CertParser {
 		this.expdate = body.getCertificateExpirationDate();
 		if (expdate==null&&isCertificate) effdateStr = " -> Expiration Date not set";
 		else if(isCertificate) expdateStr = expdate.toString();
+		
+		this.extensions = body.getCertificateExtensions();
+		if (extensions==null&&isCertificate) extentensionsStr = " -> no Extensions";
+		else if (isCertificate) {
+			sw = new StringWriter();
+			for (DiscretionaryDataTemplate ddt : extensions.getDiscretionaryDataTemplateList()) {
+				byte[] ddtValue = ddt.getDataContent();
+				sw.write(ddt.getExtensionDescription()+": " +(ddtValue.length>16?"\n":"")+HexString.bufferToHex(ddtValue, true)+"\n");			
+			}
+			extentensionsStr = sw.toString();
+		}
 		
 	}
 
@@ -250,12 +266,15 @@ public class CertParser {
 				sw.write("\nAuthorization bits: ");
 				sw.write(getAuthorizationBitString());	
 			}
-			sw.write("\n"+getAuthorizationString()+"\n\n");
+			sw.write("\n"+getAuthorizationString()+"\n");
 		
 			sw.write("Certificate Effective Date : ");
 			sw.write(getEffectiveDateString()+"\n");
 			sw.write("Certificate Expiration Date: ");
 			sw.write(getExpirationDateString()+"\n");
+			
+			sw.write("\nCertificate Extensions: \n");
+			sw.write(getExtensionsString()+"\n");
 		}
 		return sw.toString();
 	}
@@ -302,6 +321,10 @@ public class CertParser {
 	
 	public String getExpirationDateString() {
 		return expdateStr;
+	}
+	
+	public String getExtensionsString() {
+		return extentensionsStr;
 	}
 
 }

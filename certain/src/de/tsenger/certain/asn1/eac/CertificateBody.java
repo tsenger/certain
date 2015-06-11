@@ -62,7 +62,8 @@ public class CertificateBody  extends ASN1Object
     private static final int CExD = 0x40;//certificate Expiration Date
     private static final int CeEx = 0x80;//certificate Extensions
 
-    public static final int profileType = 0x7f;//Profile type Certificate
+    public static final int certWoExt = 0x7f;//Profile type Certificate without Extension
+    public static final int certWExt = 0xff;//Profile type Certificate without Extension
     public static final int requestTypeWithoutCAR = 0x0D;// Request type Certificate without CAR
     public static final int requestTypeWithCAR = 0x0F;// Request type Certificate with CAR
 
@@ -270,7 +271,7 @@ public class CertificateBody  extends ASN1Object
     {
         try
         {
-            if (certificateType == profileType)
+            if (certificateType == certWoExt || certificateType == certWExt)
             {
                 return profileToASN1Object();
             }
@@ -287,7 +288,7 @@ public class CertificateBody  extends ASN1Object
     }
 
     /**
-     * gives the type of the certificate (value should be profileType or requestType if all data are set).
+     * gives the type of the certificate (value should be certWoExt or requestType if all data are set).
      *
      * @return the int representing the data already set.
      */
