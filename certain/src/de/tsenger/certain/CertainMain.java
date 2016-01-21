@@ -274,7 +274,6 @@ public class CertainMain {
 			}
 		}
 		
-		
 		if (showDetails) System.out.println("Inner Signature:\n"+HexString.bufferToHex(dvReq.getInnerSignature(),true));
 		
 		//verify inner signature

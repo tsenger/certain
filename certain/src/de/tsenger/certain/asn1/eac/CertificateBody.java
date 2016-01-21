@@ -63,9 +63,12 @@ public class CertificateBody  extends ASN1Object
     private static final int CeEx = 0x80;//certificate Extensions
 
     public static final int certWoExt = 0x7f;//Profile type Certificate without Extension
-    public static final int certWExt = 0xff;//Profile type Certificate without Extension
+    public static final int certWExt = 0xff;//Profile type Certificate with Extension
     public static final int requestTypeWithoutCAR = 0x0D;// Request type Certificate without CAR
     public static final int requestTypeWithCAR = 0x0F;// Request type Certificate with CAR
+    public static final int requestTypeWithoutCARAndWithExt = 0x8D;//Profile type Certificate without CAR and with Extensions
+    public static final int requestTypeWithCARAndWithExt = 0x8F;//Profile type Certificate with CAR and with Extensions
+    
 
     private void setIso7816CertificateBody(DERApplicationSpecific appSpe) throws IOException {
         byte[] content;
@@ -257,6 +260,7 @@ public class CertificateBody  extends ASN1Object
         if (certificationAuthorityReference!=null) v.add(certificationAuthorityReference);
         v.add(publicKey);
         v.add(certificateHolderReference);
+        if (certificateExtensions!=null) v.add(certificateExtensions);
         return new DERApplicationSpecific(EACTags.CERTIFICATE_CONTENT_TEMPLATE, v);
     }
 
@@ -275,7 +279,7 @@ public class CertificateBody  extends ASN1Object
             {
                 return profileToASN1Object();
             }
-            if (certificateType == requestTypeWithoutCAR || certificateType == requestTypeWithCAR)
+            if (certificateType == requestTypeWithoutCAR || certificateType == requestTypeWithCAR || certificateType == requestTypeWithoutCARAndWithExt || certificateType == requestTypeWithCARAndWithExt)
             {
                 return requestToASN1Object();
             }

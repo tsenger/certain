@@ -83,7 +83,9 @@ public class DiscretionaryDataTemplate extends ASN1Object {
 	}
 	
 	public String getExtensionDescription() {
-    	return (String)ExtensionType.get(this.oid);
+		String extDescriptionString = (String)ExtensionType.get(this.oid);
+		if(extDescriptionString==null) extDescriptionString = "unknown Extension (OID: "+this.oid.toString()+")";
+    	return extDescriptionString;
     }
 
 	public static DiscretionaryDataTemplate getInstance(Object obj) throws IOException {

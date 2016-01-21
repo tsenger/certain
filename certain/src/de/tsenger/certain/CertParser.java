@@ -273,9 +273,11 @@ public class CertParser {
 			sw.write("Certificate Expiration Date: ");
 			sw.write(getExpirationDateString()+"\n");
 			
-			sw.write("\nCertificate Extensions: \n");
-			sw.write(getExtensionsString()+"\n");
 		}
+		
+		sw.write("\nCertificate Extensions: \n");
+		sw.write(getExtensionsString()+"\n");
+		
 		return sw.toString();
 	}
 	
