@@ -276,7 +276,7 @@ public class CertParser {
 		}
 		
 		sw.write("\nCertificate Extensions: \n");
-		sw.write(getExtensionsString()+"\n");
+		sw.write(getExtensionsString());
 		
 		return sw.toString();
 	}
