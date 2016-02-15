@@ -26,6 +26,10 @@ Usage: certain [options]
        Link certificate input file to new CVCA
 </code></pre>
 
+## Download
+Get latest version here
+https://github.com/tsenger/certain/blob/master/certain/dist/certain_0.91.jar
+
 ## Example
 input:
 <pre><code>
