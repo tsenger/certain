@@ -1,6 +1,7 @@
 //package org.bouncycastle.asn1.eac;
 package de.tsenger.certain.asn1.eac;
 
+import java.io.IOException;
 import java.math.BigInteger;
 import java.util.Enumeration;
 
@@ -8,6 +9,7 @@ import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.ASN1Sequence;
+import org.bouncycastle.asn1.DERApplicationSpecific;
 import org.bouncycastle.asn1.DERSequence;
 
 
@@ -119,6 +121,10 @@ public class RSAPublicKey
         v.add(new UnsignedInteger(0x01, getModulus()));
         v.add(new UnsignedInteger(0x02, getPublicExponent()));
 
-        return new DERSequence(v);
+        try {
+			return new DERApplicationSpecific(false, EACTags.PUBLIC_KEY, new DERSequence(v));
+		} catch (IOException e) {
+			throw new IllegalStateException("unable to convert public key to DERApplicationSpecific!");
+		}
     }
 }
