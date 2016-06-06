@@ -52,7 +52,7 @@ public class CertainMain {
 	@Parameter(names = {"--masterlist","-ml"}, description = "CVCA Master List")
 	private String masterListFileName;
 	
-	@Parameter(names = {"--defectlist","-dl"}, description = "shows all defects in the given Defect List")
+	@Parameter(names = {"--defectlist","-dl"}, description = "shows all defects in the given Deviation List")
 	private String defectListFileName;
 	
 	@Parameter(names = {"--help", "-h"}, description = "need help?", help = true)
@@ -123,7 +123,7 @@ public class CertainMain {
 			printMasterListInfo();
 		}
 		
-		/** Defect List **/
+		/** Deviation List **/
 		if (dlParser!=null) {
 			printDefectListInfo();
 		}
@@ -454,7 +454,7 @@ public class CertainMain {
 	}
 	
 	/**
-	 * Show Defect List Infos
+	 * Show Deviation List Infos
 	 */
 	private void printDefectListInfo() {
 		System.out.println(dlParser.getDefectListInfoString(showDetails));  
