@@ -161,7 +161,7 @@ public class CertParser {
 		else if(isCertificate) expdateStr = expdate.toString();
 		
 		this.extensions = body.getCertificateExtensions();
-		if (extensions==null&&isCertificate) extentensionsStr = " -> no Extensions";
+		if (extensions==null&&isCertificate) extentensionsStr = " -> no Extensions\n";
 		else if (isCertificate) {
 			sw = new StringWriter();
 			for (DiscretionaryDataTemplate ddt : extensions.getDiscretionaryDataTemplateList()) {
