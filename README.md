@@ -28,7 +28,7 @@ Usage: certain [options]
 
 ## Download
 Get latest version here
-https://github.com/tsenger/certain/blob/master/certain/dist/certain_0.91.jar
+https://github.com/tsenger/certain/blob/master/certain/dist/certain_0.92.jar
 
 ## Example
 input:
