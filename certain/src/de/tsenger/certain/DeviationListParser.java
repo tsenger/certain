@@ -39,19 +39,20 @@ import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.util.Store;
 
 import de.tsenger.certain.asn1.eac.BSIObjectIdentifiers;
+import de.tsenger.certain.asn1.icao.ICAOObjectIdentifiers;
 import de.tsenger.certain.asn1.mrtdpki.Defect;
 import de.tsenger.certain.asn1.mrtdpki.DefectList;
 import de.tsenger.certain.asn1.mrtdpki.KnownDefect;
 import de.tsenger.tools.HexString;
 
-public class DefectListParser {
+public class DeviationListParser {
 	
-	private List<Certificate> defectListSignerCertificates;
-	private DefectList defectList;
+	private List<Certificate> deviationListSignerCertificates;
+	private DefectList deviationList;
 	private CMSSignedData cmsSignedData;
 	private SignerInformation signerInfo;
 
-	/** Use this to get all defectListSignerCertificates, including link defectListSignerCertificates. */
+	/** Use this to get all deviationListSignerCertificates, including link deviationListSignerCertificates. */
 	private static final CertSelector IDENTITY_SELECTOR = new X509CertSelector() {
 		@Override
 		public boolean match(Certificate cert) {
@@ -63,7 +64,7 @@ public class DefectListParser {
 		public Object clone() { return this; }	
 	};
 
-	/** Use this to get self-signed defectListSignerCertificates only. (Excludes link defectListSignerCertificates.) */
+	/** Use this to get self-signed deviationListSignerCertificates only. (Excludes link deviationListSignerCertificates.) */
 	private static final CertSelector SELF_SIGNED_SELECTOR = new X509CertSelector() {
 		@Override
 		public boolean match(Certificate cert) {
@@ -80,31 +81,31 @@ public class DefectListParser {
 	
 
 	/** Private constructor, only used locally. */
-	private DefectListParser() {
-		this.defectListSignerCertificates = new ArrayList<Certificate>(4);	
+	private DeviationListParser() {
+		this.deviationListSignerCertificates = new ArrayList<Certificate>(4);	
 	}
 	
 	
-	public DefectListParser(byte[] binary, CertSelector selector) {
+	public DeviationListParser(byte[] binary, CertSelector selector) {
 		this();
 		
 		this.cmsSignedData = buildCMSSignedDataFromBinary(binary);		
 		this.signerInfo = parseSignerInfo();
-		this.defectList = parseDefectList();
-		this.defectListSignerCertificates = getDefectListSignerCertificates(cmsSignedData);		
+		this.deviationList = parseDeviationList();
+		this.deviationListSignerCertificates = getDeviationListSignerCertificates(cmsSignedData);		
 	}
 	
 
-	public DefectListParser(byte[] binary) {
+	public DeviationListParser(byte[] binary) {
 		this(binary, IDENTITY_SELECTOR);
 	}
 	
 	public List<Certificate> getDefectListSignerCertificates() {
-		return defectListSignerCertificates;
+		return deviationListSignerCertificates;
 	}
 	
 	public DefectList getDefectList() {
-		return defectList;
+		return deviationList;
 	}
 	
 	public String getDefectListInfoString(boolean showDetails) {
@@ -115,12 +116,12 @@ public class DefectListParser {
 		
 		if 	(cmsSignedData.getVersion()!=3)	System.out.println("SignedData Version SHOULD be 3 but is "+ cmsSignedData.getVersion()+"!");
 		
-		sw.write("\nThis Deviation List contains defects from "+defectList.getDefects().size()+" different DS certificates\n");
-		sw.write("and contains "+defectListSignerCertificates.size()+" Defects List Signer certificates:\n\n");
+		sw.write("\nThis Deviation List contains defects from "+deviationList.getDefects().size()+" different DS certificates\n");
+		sw.write("and contains "+deviationListSignerCertificates.size()+" Defects List Signer certificates:\n\n");
 		
 		PublicKey pubKey = null;	
 		
-		for (Certificate cert : defectListSignerCertificates) {			
+		for (Certificate cert : deviationListSignerCertificates) {			
 			X509Certificate x509Cert = (X509Certificate) cert;
 			
 			if (x509Cert.getSubjectDN().toString().equals(x509Cert.getIssuerDN().toString())) {
@@ -130,7 +131,7 @@ public class DefectListParser {
 		
 		if (pubKey != null) {
 
-			for (Certificate cert : defectListSignerCertificates) {
+			for (Certificate cert : deviationListSignerCertificates) {
 				
 				X509Certificate x509Cert = (X509Certificate) cert;
 
@@ -159,9 +160,9 @@ public class DefectListParser {
 		
 		
 				
-		for (int i=0;i<defectList.getDefects().size();i++) {
+		for (int i=0;i<deviationList.getDefects().size();i++) {
 			sw.write("\n++++++++++++++++++++++++++++++++++ DEFECT No. "+(i+1)+" ++++++++++++++++++++++++++++++++++\n");
-			defect = Defect.getInstance(defectList.getDefects().getObjectAt(i));
+			defect = Defect.getInstance(deviationList.getDefects().getObjectAt(i));
 			
 			if (defect.getSignerId().getId() instanceof ASN1Encodable) { //SignerIdentifier CHOICE is IssuerAndSerialNumber 
 				IssuerAndSerialNumber iasn = IssuerAndSerialNumber.getInstance(defect.getSignerId().getId());
@@ -269,7 +270,7 @@ public class DefectListParser {
 	
 	public boolean verifySignedData() {
 		boolean result = false;
-		for (Certificate cert : defectListSignerCertificates) {			
+		for (Certificate cert : deviationListSignerCertificates) {			
 			X509Certificate x509Cert = (X509Certificate) cert;
 			
 			if (x509Cert.getSubjectDN().toString().equals(x509Cert.getIssuerDN().toString())) {
@@ -294,14 +295,14 @@ public class DefectListParser {
 		return signerInfo;
 	}
 	
-	private DefectList parseDefectList() {
+	private DefectList parseDeviationList() {
 		
-		DefectList defectList = null;
+		DefectList deviationList = null;
 
-		String id_DefectList = cmsSignedData.getSignedContentTypeOID(); 
+		String id_DeviationList = cmsSignedData.getSignedContentTypeOID(); 
 		CMSProcessableByteArray content = (CMSProcessableByteArray) cmsSignedData.getSignedContent();
 		
-		if (id_DefectList.equals(BSIObjectIdentifiers.DefectList.toString())) {
+		if (id_DeviationList.equals(ICAOObjectIdentifiers.id_icao_DeviationList.toString())) {
 			ByteArrayOutputStream bout = new ByteArrayOutputStream();
 			
 			try {
@@ -311,13 +312,13 @@ public class DefectListParser {
 			}
 			
 			byte[] octets = bout.toByteArray();
-			defectList = DefectList.getInstance(octets);
+			deviationList = DefectList.getInstance(octets);
 		}
-		return defectList;
+		return deviationList;
 	}
 
 	
-	private List<Certificate> getDefectListSignerCertificates(CMSSignedData signedData) {
+	private List<Certificate> getDeviationListSignerCertificates(CMSSignedData signedData) {
 		
 		List<Certificate> result = new ArrayList<Certificate>();
 
