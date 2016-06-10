@@ -6,6 +6,7 @@ import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.ASN1Set;
 import org.bouncycastle.asn1.ASN1TaggedObject;
+import org.bouncycastle.asn1.DERPrintableString;
 import org.bouncycastle.asn1.DERSequence;
 
 
@@ -94,8 +95,10 @@ public class DeviationDocuments extends ASN1Object
 		return DERSequence.getInstance(v);
 	}
 	
-	public ASN1TaggedObject getDocumentType() {
-		return documentType;
+	public String getDocumentType() {
+		if (documentType != null)
+			return ((DERPrintableString)documentType.getLoadedObject()).getString();
+		else return null;
 	}
 	
 	public DocumentSignerIdentifier getDscIdentifier() {
