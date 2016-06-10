@@ -12,7 +12,7 @@ import org.bouncycastle.asn1.x509.AlgorithmIdentifier;
 
 
 /**
- * DeviationList as specified in BSI TR-03129
+ * DeviationList as specified in DOC9303 Part 3
  * <p/>
  * <pre>
  *  DeviationList ::= SEQUENCE {
