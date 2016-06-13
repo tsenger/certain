@@ -52,8 +52,8 @@ public class CertainMain {
 	@Parameter(names = {"--masterlist","-ml"}, description = "CVCA Master List")
 	private String masterListFileName;
 	
-	@Parameter(names = {"--defectlist","-dl"}, description = "shows all defects in the given Deviation List")
-	private String defectListFileName;
+	@Parameter(names = {"--dlist","-dl"}, description = "shows all defects in the given Deviation/Defect List")
+	private String dListFileName;
 	
 	@Parameter(names = {"--help", "-h"}, description = "need help?", help = true)
 	private boolean help;
@@ -69,7 +69,7 @@ public class CertainMain {
 	private CVCertificate linkCert = null;	
 	
 	private MasterListParser mlParser = null;
-	private DefectListParser dlParser = null;
+	private DListParser dlParser = null;
 		
 	private CertParser cvParser = null;
 	private CertVerifier verifier;
@@ -125,7 +125,7 @@ public class CertainMain {
 		
 		/** Deviation List **/
 		if (dlParser!=null) {
-			printDefectListInfo();
+			printDListInfo();
 		}
 
 	}
@@ -183,10 +183,10 @@ public class CertainMain {
 			}	
 		}
 		
-		if (defectListFileName!=null) {
+		if (dListFileName!=null) {
 			try {
-				tempBytes = FileSystem.readFile(defectListFileName);
-				dlParser = new DefectListParser(tempBytes);			
+				tempBytes = FileSystem.readFile(dListFileName);
+				dlParser = new DListParser(tempBytes);			
 			} catch (Exception e) {
 				System.err.println("Error while open file "+e.getMessage());
 			}	
@@ -454,10 +454,10 @@ public class CertainMain {
 	}
 	
 	/**
-	 * Show Deviation List Infos
+	 * Show Defect / Deviation List Infos
 	 */
-	private void printDefectListInfo() {
-		System.out.println(dlParser.getDefectListInfoString(showDetails));  
+	private void printDListInfo() {
+		System.out.println(dlParser.getDListInfoString(showDetails));  
 	}
 	
 
