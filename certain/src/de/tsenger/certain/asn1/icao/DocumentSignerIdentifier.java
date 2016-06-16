@@ -62,11 +62,11 @@ public class DocumentSignerIdentifier extends ASN1Object implements ASN1Choice {
 			
     		switch (tag) {
             	case TYPE_issuerAndSerialNumber:    
-            		return new DocumentSignerIdentifier(IssuerAndSerialNumber.getInstance(tagObj.getObjectParser(TYPE_issuerAndSerialNumber, true)));
+            		return new DocumentSignerIdentifier(IssuerAndSerialNumber.getInstance(tagObj.getObjectParser(TYPE_issuerAndSerialNumber, false)));
             	case TYPE_subjectKeyIdentifier:
-            		return new DocumentSignerIdentifier(SubjectKeyIdentifier.getInstance(tagObj, true));
+            		return new DocumentSignerIdentifier(SubjectKeyIdentifier.getInstance(tagObj, false));
             	case TYPE_certificateDigest:
-            		return new DocumentSignerIdentifier(ASN1OctetString.getInstance(tagObj, true));
+            		return new DocumentSignerIdentifier(ASN1OctetString.getInstance(tagObj, false));
             	default:
             		throw new IllegalArgumentException("unknown tag: " + tagObj.getTagNo());
             }

@@ -70,6 +70,7 @@ public class CertainMain {
 	
 	private MasterListParser mlParser = null;
 	private DListParser dlParser = null;
+	private SignedDataParser sdParser = null;
 		
 	private CertParser cvParser = null;
 	private CertVerifier verifier;
@@ -134,7 +135,7 @@ public class CertainMain {
 	 * Read the files which are set via the command line arguments and set the CVCerticate / CVCertificateRequest instances.
 	 */
 	private void readFilesAndGetInstances() {
-		byte[] tempBytes;
+		byte[] tempBytes = null;
 		CVCertificate tmpCvCert;
 		certStore = new CertStorage();
 		
@@ -186,7 +187,8 @@ public class CertainMain {
 		if (dListFileName!=null) {
 			try {
 				tempBytes = FileSystem.readFile(dListFileName);
-				dlParser = new DListParser(tempBytes);			
+				sdParser = new SignedDataParser(tempBytes);
+				dlParser = sdParser.getDListParser();
 			} catch (Exception e) {
 				System.err.println("Error while open file "+e.getMessage());
 			}	
@@ -457,7 +459,8 @@ public class CertainMain {
 	 * Show Defect / Deviation List Infos
 	 */
 	private void printDListInfo() {
-		System.out.println(dlParser.getDListInfoString(showDetails));  
+		if (sdParser != null) System.out.println(sdParser.getSignedDataInfoString());
+		if (dlParser != null) System.out.println(dlParser.getDListInfoString(showDetails));  
 	}
 	
 

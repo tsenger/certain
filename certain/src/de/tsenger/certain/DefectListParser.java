@@ -1,25 +1,17 @@
 package de.tsenger.certain;
 
 import java.io.StringWriter;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
-import java.security.PublicKey;
-import java.security.SignatureException;
 import java.security.cert.Certificate;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
 
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1Integer;
+import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.DEREnumerated;
-import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DLSet;
 import org.bouncycastle.asn1.cms.IssuerAndSerialNumber;
-import org.bouncycastle.asn1.x509.SubjectKeyIdentifier;
 
 import de.tsenger.certain.asn1.eac.BSIObjectIdentifiers;
 import de.tsenger.certain.asn1.mrtdpki.Defect;
@@ -31,9 +23,8 @@ public class DefectListParser extends DListParser{
 	
 	private DefectList defectList;
 
-	public DefectListParser(byte[] binary) {
-		super(binary);
-		defectList = DefectList.getInstance(super.getdList());
+	public DefectListParser(ASN1Object dListObject) {
+		defectList = DefectList.getInstance(dListObject);
 	}
 	
 	@Override
@@ -42,53 +33,9 @@ public class DefectListParser extends DListParser{
 		Defect defect;
 		
 		StringWriter sw = new StringWriter();
-		
-		if 	(cmsSignedData.getVersion()!=3)	System.out.println("SignedData Version SHOULD be 3 but is "+ cmsSignedData.getVersion()+"!");
-		
-		sw.write("\nThis Deviation List contains defects from "+defectList.getDefects().size()+" different DS certificates\n");
-		sw.write("and contains "+dListSignerCertificates.size()+" Defects List Signer certificates:\n\n");
-		
-		PublicKey pubKey = null;	
-		
-		for (Certificate cert : dListSignerCertificates) {			
-			X509Certificate x509Cert = (X509Certificate) cert;
-			
-			if (x509Cert.getSubjectDN().toString().equals(x509Cert.getIssuerDN().toString())) {
-				pubKey = x509Cert.getPublicKey();
-			}			
-		}
-		
-		if (pubKey != null) {
-
-			for (Certificate cert : dListSignerCertificates) {
 				
-				X509Certificate x509Cert = (X509Certificate) cert;
-
-				String subjectDN = x509Cert.getSubjectDN().toString();
-				String issuerDN = x509Cert.getIssuerDN().toString();
-				
-				sw.write("Subject DN: "+subjectDN+"\n");
-				sw.write("Issuer  DN:  "+issuerDN+"\n");
-				DEROctetString oct = (DEROctetString) DEROctetString.getInstance(x509Cert.getExtensionValue("2.5.29.14"));
-				SubjectKeyIdentifier skid = SubjectKeyIdentifier.getInstance(oct.getOctets());
-				sw.write("X509 SubjectKeyIdentifier: "+HexString.bufferToHex(skid.getKeyIdentifier())+"\n");
-				
-				try {
-					((X509Certificate) cert).verify(pubKey);
-					sw.write("Signature is VALID.\n\n");
-				} catch (InvalidKeyException | CertificateException | NoSuchAlgorithmException | NoSuchProviderException | SignatureException e) {
-					sw.write("Verifying signature of "+((X509Certificate) cert).getSubjectDN()+" failed: ");
-					sw.write(e.getLocalizedMessage()+"\n\n");
-				}
-			}
-		} else {
-			sw.write("Could verify signatures. Didn't found a valid issuer\n");
-		}
-		
-		sw.write("Signature of SignedData object is "+(verifySignedData()?"VALID":"!!! INVALID !!!")+"\n");
-		
-		
-				
+		sw.write("\nThis Defect List contains defects from "+defectList.getDefects().size()+" different DS certificates\n");
+						
 		for (int i=0;i<defectList.getDefects().size();i++) {
 			sw.write("\n++++++++++++++++++++++++++++++++++ DEFECT No. "+(i+1)+" ++++++++++++++++++++++++++++++++++\n");
 			defect = Defect.getInstance(defectList.getDefects().getObjectAt(i));
