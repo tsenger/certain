@@ -6,6 +6,7 @@ import org.bouncycastle.asn1.ASN1Integer;
 import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Primitive;
+import org.bouncycastle.asn1.ASN1TaggedObject;
 
 
 /**
@@ -64,18 +65,23 @@ public class CertField extends ASN1Object implements ASN1Choice {
             return (CertField) obj;
         }
         
-        if (obj instanceof ASN1Integer)
-        {
-            ASN1Integer certBodyFieldObj = ASN1Integer.getInstance(obj);
-            int  certBodyField = certBodyFieldObj.getValue().intValue();
+        if (obj instanceof ASN1TaggedObject) {
+        	ASN1Object embeddedObj = ASN1TaggedObject.getInstance(obj).getObject();
+        	
+        	if (embeddedObj instanceof ASN1Integer)
+            {
+                ASN1Integer certBodyFieldObj = ASN1Integer.getInstance(embeddedObj);
+                int  certBodyField = certBodyFieldObj.getValue().intValue();
 
-            return new CertField(certBodyField);
+                return new CertField(certBodyField);
+            }
+            else if (embeddedObj instanceof ASN1ObjectIdentifier)
+            {
+                ASN1ObjectIdentifier extensionOID = ASN1ObjectIdentifier.getInstance(embeddedObj);
+                return new CertField(extensionOID);
+            }
         }
-        else if (obj instanceof ASN1ObjectIdentifier)
-        {
-            ASN1ObjectIdentifier extensionOID = ASN1ObjectIdentifier.getInstance(obj);
-            return new CertField(extensionOID);
-        }
+        
 
         throw new IllegalArgumentException("unknown object in getInstance");
     }

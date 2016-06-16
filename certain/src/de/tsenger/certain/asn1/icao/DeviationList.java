@@ -39,10 +39,10 @@ public class DeviationList extends ASN1Object
 		
 		version = ASN1Integer.getInstance(seq.getObjectAt(index++));
 		
-		if (seq.getObjectAt(index) instanceof AlgorithmIdentifier) {
+		if (seq.getObjectAt(index) instanceof ASN1Sequence) {
 			digestAlg = AlgorithmIdentifier.getInstance(seq.getObjectAt(index++));
 		}
-		if (seq.getObjectAt(index) instanceof AlgorithmIdentifier) {
+		if (seq.getObjectAt(index) instanceof ASN1Set) {
 			deviations = ASN1Set.getInstance(seq.getObjectAt(index++));
 		}		
 		

@@ -48,10 +48,10 @@ public class DeviationDescription extends ASN1Object
 			deviationType = ASN1ObjectIdentifier.getInstance(seq.getObjectAt(index++));
 		}
 		if (seq.getObjectAt(index) instanceof ASN1TaggedObject) {
-			parameters = ASN1TaggedObject.getInstance((ASN1TaggedObject) seq.getObjectAt(index++),false);
+			parameters = ASN1TaggedObject.getInstance(seq.getObjectAt(index++));
 		}	
 		if (seq.getObjectAt(index) instanceof ASN1TaggedObject) {
-			nationalUse = ASN1TaggedObject.getInstance((ASN1TaggedObject) seq.getObjectAt(index++),false);
+			nationalUse = ASN1TaggedObject.getInstance(seq.getObjectAt(index++));
 		}
 		
 		
