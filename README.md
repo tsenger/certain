@@ -6,13 +6,13 @@ Usage: certain [options]
   Options:
     --cert, -c
        CVCA or DV certificate input files. Parameter can receive multiply
-       values. (e.g. --cert &lt;file1&gt; [&lt;file2&gt; [&lt;file3&gt;] ... ]
-    --defectlist, -dl
-       shows all defects in the given Defect List
+       values. (e.g. -cert <file1> [<file2> [<file3>] ... ]
     --details, -d
        Show more details (full publickey values and signature bytes) on the
        certificates and requests.
        Default: false
+    --dlist, -dl
+       shows all defects in the given Deviation/Defect List
     --dvreq, -r
        DV request input file
     --fingerprint, -f
@@ -24,6 +24,8 @@ Usage: certain [options]
        Default: false
     --linkcert, -l
        Link certificate input file to new CVCA
+    --masterlist, -ml
+       CVCA Master List
 </code></pre>
 
 ## Download
