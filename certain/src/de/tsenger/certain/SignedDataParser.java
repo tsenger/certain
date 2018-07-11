@@ -92,7 +92,7 @@ public class SignedDataParser {
 				try {
 					result = verifier.signatureVerified(cmsSignedData);
 				} catch (CertificateException | OperatorCreationException | CMSException e) {
-					System.out.println("Couldn't verify signature of SignedData objekt: "+e.getMessage());
+					System.out.println("Verify failed: "+e.getMessage());
 				}				
 			}				
 		}
@@ -110,15 +110,58 @@ public class SignedDataParser {
 	
 	
 	public String getSignedDataInfoString() {
-		
+
 		StringWriter sw = new StringWriter();
-		
-		if 	(cmsSignedData.getVersion()!=3)	System.out.println("SignedData Version SHOULD be 3 but is "+ cmsSignedData.getVersion()+"!");
-		
-		sw.write("SignedData object contains "+dListSignerCertificates.size()+" Signer certificates:\n\n");
-		
+
+		if (cmsSignedData.getVersion() != 3)
+			System.out.println("SignedData Version SHOULD be 3 but is " + cmsSignedData.getVersion() + "!");
+
+		sw.write("SignedData object contains " + dListSignerCertificates.size() + " Signer certificates:\n\n");
+
+		PublicKey pubKey = getRootCertPubKey();
+
+		for (Certificate cert : dListSignerCertificates) {
+
+			X509Certificate x509Cert = (X509Certificate) cert;
+
+			String subjectDN = x509Cert.getSubjectDN().toString();
+			String issuerDN = x509Cert.getIssuerDN().toString();
+
+			sw.write("Subject DN: " + subjectDN + "\n");
+			sw.write("Issuer  DN:  " + issuerDN + "\n");
+			DEROctetString oct = (DEROctetString) DEROctetString.getInstance(x509Cert.getExtensionValue("2.5.29.14"));
+			SubjectKeyIdentifier skid = SubjectKeyIdentifier.getInstance(oct.getOctets());
+			sw.write("X509 SubjectKeyIdentifier: " + HexString.bufferToHex(skid.getKeyIdentifier()) + "\n");
+
+			if (pubKey != null) {
+				try {
+					((X509Certificate) cert).verify(pubKey);
+					sw.write("Signature is VALID.\n\n");
+				} catch (InvalidKeyException | CertificateException | NoSuchAlgorithmException | NoSuchProviderException | SignatureException e) {
+					sw.write("Verifying signature of \"" + ((X509Certificate) cert).getSubjectDN() + "\" failed: ");
+					sw.write(e.getLocalizedMessage() + "\n\n");
+				}
+			} else {
+				sw.write("Couldn't verify signature because of missing issuer certificate!\n\n");
+			}			
+		}
+		if (pubKey != null) {
+			sw.write("Signature of SignedData object is "+(verifySignedData()?"VALID":"!!! INVALID !!!")+"\n");
+		} else {
+			sw.write("SignedData signature couldn't be verified because of missing issuer certificate!\n");
+		}
+
+		return sw.toString();
+	}
+
+
+	/**
+	 * @return
+	 */
+	private PublicKey getRootCertPubKey() {
 		PublicKey pubKey = null;	
 		
+		//Search for selfsigned Certificate because we think thats the root certificate 
 		for (Certificate cert : dListSignerCertificates) {			
 			X509Certificate x509Cert = (X509Certificate) cert;
 			
@@ -126,37 +169,7 @@ public class SignedDataParser {
 				pubKey = x509Cert.getPublicKey();
 			}			
 		}
-		
-		if (pubKey != null) {
-
-			for (Certificate cert : dListSignerCertificates) {
-				
-				X509Certificate x509Cert = (X509Certificate) cert;
-
-				String subjectDN = x509Cert.getSubjectDN().toString();
-				String issuerDN = x509Cert.getIssuerDN().toString();
-				
-				sw.write("Subject DN: "+subjectDN+"\n");
-				sw.write("Issuer  DN:  "+issuerDN+"\n");
-				DEROctetString oct = (DEROctetString) DEROctetString.getInstance(x509Cert.getExtensionValue("2.5.29.14"));
-				SubjectKeyIdentifier skid = SubjectKeyIdentifier.getInstance(oct.getOctets());
-				sw.write("X509 SubjectKeyIdentifier: "+HexString.bufferToHex(skid.getKeyIdentifier())+"\n");
-				
-				try {
-					((X509Certificate) cert).verify(pubKey);
-					sw.write("Signature is VALID.\n\n");
-				} catch (InvalidKeyException | CertificateException | NoSuchAlgorithmException | NoSuchProviderException | SignatureException e) {
-					sw.write("Verifying signature of \""+((X509Certificate) cert).getSubjectDN()+"\" failed: ");
-					sw.write(e.getLocalizedMessage()+"\n\n");
-				}
-			}
-		} else {
-			sw.write("Couldn't verify signatures. Didn't found a valid issuer\n");
-		}
-		
-		sw.write("Signature of SignedData object is "+(verifySignedData()?"VALID":"!!! INVALID !!!")+"\n");	
-		
-		return sw.toString();
+		return pubKey;
 	}
 	
 	private ASN1Object parseDList() {

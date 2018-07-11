@@ -44,13 +44,13 @@ public class DeviationDescription extends ASN1Object
 			description = DERPrintableString.getInstance(seq.getObjectAt(index++));
 		}
 		
-		if (seq.getObjectAt(index) instanceof ASN1ObjectIdentifier) {
+		if ((index<seq.size()) && (seq.getObjectAt(index) instanceof ASN1ObjectIdentifier)) {
 			deviationType = ASN1ObjectIdentifier.getInstance(seq.getObjectAt(index++));
 		}
-		if (seq.getObjectAt(index) instanceof ASN1TaggedObject) {
+		if ((index<seq.size()) && (seq.getObjectAt(index) instanceof ASN1TaggedObject)) {
 			parameters = ASN1TaggedObject.getInstance(seq.getObjectAt(index++));
 		}	
-		if (seq.getObjectAt(index) instanceof ASN1TaggedObject) {
+		if ((index<seq.size()) && (seq.getObjectAt(index) instanceof ASN1TaggedObject)) {
 			nationalUse = ASN1TaggedObject.getInstance(seq.getObjectAt(index++));
 		}
 		
