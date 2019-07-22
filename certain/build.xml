@@ -24,10 +24,7 @@
     	<mkdir dir="${class.dir}"/>
         <javac srcdir="${tmp.dir}/${ant.project.name}" 
         	includes="de/tsenger/certain/** 
-        		org/bouncycastle/jcajce/provider/asymmetric/EC.java
-        		org/bouncycastle/jcajce/provider/asymmetric/RSA.java
-        		org/bouncycastle/jcajce/provider/asymmetric/ec/* 
-        		org/bouncycastle/jcajce/provider/asymmetric/rsa/*" 
+        		org/bouncycastle/jcajce/provider/**" 
         	excludes="de/tsenger/certain/junit/**"
         	destdir="${class.dir}" 
         	includeAntRuntime="false"
