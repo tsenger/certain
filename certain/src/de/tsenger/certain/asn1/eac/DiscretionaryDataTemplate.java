@@ -16,6 +16,7 @@ public class DiscretionaryDataTemplate extends ASN1Object {
 
 	private ASN1ObjectIdentifier oid;
 	private byte[] dataContent;
+	private int tag=0xFF;
 	
 	static BidirectionalMap ExtensionType = new BidirectionalMap();
     static
@@ -61,7 +62,8 @@ public class DiscretionaryDataTemplate extends ASN1Object {
 				else if (tmpObj instanceof DERTaggedObject) {
 					DERTaggedObject aSpe = (DERTaggedObject) tmpObj;
 					//Tag 0x80 and 0x81 are valid tags here
-					if (aSpe.getTagNo() == 0x00 || aSpe.getTagNo() == 0x01) {
+					this.tag = aSpe.getTagNo();
+					if (this.tag == 0x00 || this.tag == 0x01) {
 						dataContent = ((DEROctetString) aSpe.getObject()).getOctets();
 					} else {
 						content.close();
@@ -102,7 +104,11 @@ public class DiscretionaryDataTemplate extends ASN1Object {
 	public ASN1Primitive toASN1Primitive() {
 		ASN1EncodableVector v = new ASN1EncodableVector();
 		v.add(oid);
-		v.add(new DERApplicationSpecific(EACTags.DISCRETIONARY_DATA, dataContent));
+		if (this.tag != 0xFF)
+			v.add(new DERTaggedObject(false, this.tag, new DEROctetString(dataContent)));
+		else
+			v.add(new DERApplicationSpecific(EACTags.DISCRETIONARY_DATA, dataContent));
+		
 		try {
 			return new DERApplicationSpecific(false, EACTags.DISCRETIONARY_DATA_TEMPLATE, new DERSequence(v));
 		} catch (IOException e) {
