@@ -29,6 +29,7 @@ import de.tsenger.certain.asn1.eac.EACObjectIdentifiers;
 import de.tsenger.certain.asn1.eac.ECDSAPublicKey;
 import de.tsenger.certain.asn1.eac.PublicKeyDataObject;
 import de.tsenger.certain.asn1.eac.RSAPublicKey;
+import de.tsenger.tools.HexString;
 
 public class CertVerifier {
 
