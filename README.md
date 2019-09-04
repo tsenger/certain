@@ -30,7 +30,7 @@ Usage: certain [options]
 
 ## Download
 Get latest version here
-https://github.com/tsenger/certain/releases/download/v0.94/certain_v0.94.jar
+https://github.com/tsenger/certain/releases/
 
 ## Example
 input:
