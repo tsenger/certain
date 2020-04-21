@@ -52,7 +52,7 @@ public class CertParser {
 		clearAll();
 		this.body = body;
 		this.isCertificate = isCertificate;
-		parse();
+		//parse();
 	}
 
 	
@@ -243,6 +243,7 @@ public class CertParser {
 	public String getContentString(boolean showDetails) {	
 		this.showDetails = showDetails;
 		
+		parse();
 		
 		StringWriter sw = new StringWriter();
 		if (profileIdStr!=null) sw.write("Profile ID: "+profileIdStr+"\n\n");
