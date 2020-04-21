@@ -29,13 +29,11 @@ import de.tsenger.certain.asn1.eac.EACObjectIdentifiers;
 import de.tsenger.certain.asn1.eac.ECDSAPublicKey;
 import de.tsenger.certain.asn1.eac.PublicKeyDataObject;
 import de.tsenger.certain.asn1.eac.RSAPublicKey;
-import de.tsenger.tools.HexString;
 
 public class CertVerifier {
 
 	private final PublicKey publicKey;
 	private final Signature sig;
-	private byte[] signatureBytes;
 	private static final Hashtable<ASN1ObjectIdentifier, String> sigNames = new Hashtable<ASN1ObjectIdentifier, String>();
 
 	static {
@@ -205,13 +203,12 @@ public class CertVerifier {
 		}
 
 		BigInteger p = key.getPrimeModulusP();
-		ECCurve.Fp curve = new ECCurve.Fp(p, key.getFirstCoefA(), key.getSecondCoefB());
+		ECCurve.Fp curve = new ECCurve.Fp(p, key.getFirstCoefA(), key.getSecondCoefB(), null, null);
 
 		ECPoint G = curve.decodePoint(key.getBasePointG());
 
 		BigInteger order = key.getOrderOfBasePointR();
 		BigInteger coFactor = key.getCofactorF();
-		// TODO: update to use JDK 1.5 EC API
 		ECParameterSpec ecspec = new ECParameterSpec(curve, G, order, coFactor);
 
 		return ecspec;

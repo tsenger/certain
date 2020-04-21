@@ -12,6 +12,7 @@ import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.BERTags;
 import org.bouncycastle.asn1.DERApplicationSpecific;
+import org.bouncycastle.asn1.ASN1ApplicationSpecific;
 import org.bouncycastle.asn1.DEROctetString;
 
 
@@ -24,18 +25,18 @@ public class CVCertificateRequest extends ASN1Object
     private byte[] innerSignature = null;
     private byte[] outerSignature = null;
 
-    private CVCertificateRequest(DERApplicationSpecific request)  throws IOException
+    private CVCertificateRequest(ASN1ApplicationSpecific request)  throws IOException
     {
 //        if (request.getApplicationTag() == EACTags.AUTHENTIFICATION_DATA)
     	if (request.getApplicationTag() == 7)
         {
             ASN1Sequence seq = ASN1Sequence.getInstance(request.getObject(BERTags.SEQUENCE));
 
-            initCertBody(DERApplicationSpecific.getInstance(seq.getObjectAt(0)));
+            initCertBody(ASN1ApplicationSpecific.getInstance(seq.getObjectAt(0)));
             
-            outerCAR = new CertificationAuthorityReference(DERApplicationSpecific.getInstance(seq.getObjectAt(1)).getContents());
+            outerCAR = new CertificationAuthorityReference(ASN1ApplicationSpecific.getInstance(seq.getObjectAt(1)).getContents());
 
-            outerSignature = DERApplicationSpecific.getInstance(seq.getObjectAt(seq.size() - 1)).getContents();
+            outerSignature = ASN1ApplicationSpecific.getInstance(seq.getObjectAt(seq.size() - 1)).getContents();
         }
         else
         {
@@ -43,7 +44,7 @@ public class CVCertificateRequest extends ASN1Object
         }
     }
 
-    private void initCertBody(DERApplicationSpecific request)
+    private void initCertBody(ASN1ApplicationSpecific request)
         throws IOException
     {
         if (request.getApplicationTag() == EACTags.CARDHOLDER_CERTIFICATE)
@@ -51,7 +52,7 @@ public class CVCertificateRequest extends ASN1Object
             ASN1Sequence seq = ASN1Sequence.getInstance(request.getObject(BERTags.SEQUENCE));
             for (Enumeration<?> en = seq.getObjects(); en.hasMoreElements();)
             {
-                DERApplicationSpecific obj = DERApplicationSpecific.getInstance(en.nextElement());
+                ASN1ApplicationSpecific obj = ASN1ApplicationSpecific.getInstance(en.nextElement());
                 switch (obj.getApplicationTag())
                 {
                 case EACTags.CERTIFICATE_CONTENT_TEMPLATE:
@@ -81,7 +82,7 @@ public class CVCertificateRequest extends ASN1Object
         {
             try
             {
-                return new CVCertificateRequest(DERApplicationSpecific.getInstance(obj));
+                return new CVCertificateRequest(ASN1ApplicationSpecific.getInstance(obj));
             }
             catch (IOException e)
             {

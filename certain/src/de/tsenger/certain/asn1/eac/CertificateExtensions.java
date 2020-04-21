@@ -9,6 +9,7 @@ import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.DERApplicationSpecific;
+import org.bouncycastle.asn1.ASN1ApplicationSpecific;
 import org.bouncycastle.asn1.DERSequence;
 
 public class CertificateExtensions extends ASN1Object {
@@ -23,13 +24,13 @@ public class CertificateExtensions extends ASN1Object {
 		this.DiscretionaryDataTemplateList.add(ddt);
 	}
 	
-	private CertificateExtensions(DERApplicationSpecific appSpe)
+	private CertificateExtensions(ASN1ApplicationSpecific appSpe)
 	        throws IOException
 	    {
 	        setCertificateExtensions(appSpe);
 	    }
 
-	private void setCertificateExtensions(DERApplicationSpecific appSpe) throws IOException {
+	private void setCertificateExtensions(ASN1ApplicationSpecific appSpe) throws IOException {
 		byte[] content;
         if (appSpe.getApplicationTag() == EACTags.CERTIFICATE_EXTENSIONS)
         {
@@ -42,16 +43,16 @@ public class CertificateExtensions extends ASN1Object {
         ASN1InputStream aIS = new ASN1InputStream(content);
         ASN1Primitive obj;
         while ((obj = aIS.readObject()) != null) {
-            DERApplicationSpecific aSpe;
+            ASN1ApplicationSpecific aSpe;
 
-            if (obj instanceof DERApplicationSpecific)
+            if (obj instanceof ASN1ApplicationSpecific)
             {
-                aSpe = (DERApplicationSpecific)obj;
+                aSpe = (ASN1ApplicationSpecific)obj;
             }
             else
             {
             	aIS.close();
-                throw new IOException("Not a valid iso7816 content : not a DERApplicationSpecific Object :" + EACTags.encodeTag(appSpe) + obj.getClass());           
+                throw new IOException("Not a valid iso7816 content : not a ASN1ApplicationSpecific Object :" + EACTags.encodeTag(appSpe) + obj.getClass());           
             }
             if (aSpe.getApplicationTag()==EACTags.DISCRETIONARY_DATA_TEMPLATE) {
 	            addDiscretionaryDataTemplate(DiscretionaryDataTemplate.getInstance(aSpe));
@@ -97,7 +98,7 @@ public class CertificateExtensions extends ASN1Object {
 	        }
 	        else if (appSpe != null)
 	        {
-	            return new CertificateExtensions(DERApplicationSpecific.getInstance(appSpe));
+	            return new CertificateExtensions(ASN1ApplicationSpecific.getInstance(appSpe));
 	        }
 
 	        return null;

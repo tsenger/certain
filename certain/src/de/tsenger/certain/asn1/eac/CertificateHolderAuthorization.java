@@ -3,6 +3,7 @@ package de.tsenger.certain.asn1.eac;
 
 import java.io.IOException;
 
+import org.bouncycastle.asn1.ASN1ApplicationSpecific;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1Object;
@@ -21,7 +22,7 @@ import de.tsenger.tools.Converter;
  *  	// level
  *  	ASN1ObjectIdentifier		oid,
  *  	// access rights
- *  	DERApplicationSpecific	accessRights,
+ *  	ASN1ApplicationSpecific	accessRights,
  *  }
  * </pre>
  */
@@ -29,7 +30,7 @@ public class CertificateHolderAuthorization
     extends ASN1Object
 {
     ASN1ObjectIdentifier oid;
-    DERApplicationSpecific accessRights;
+    ASN1ApplicationSpecific accessRights;
     long authorization;
     public static final ASN1ObjectIdentifier id_IS = EACObjectIdentifiers.bsi_de.branch("3.1.2.1");
     public static final ASN1ObjectIdentifier id_AT = EACObjectIdentifiers.bsi_de.branch("3.1.2.2");
@@ -145,9 +146,9 @@ public class CertificateHolderAuthorization
             throw new IllegalArgumentException("no Oid in CerticateHolderAuthorization");
         }
         obj = cha.readObject();
-        if (obj instanceof DERApplicationSpecific)
+        if (obj instanceof ASN1ApplicationSpecific)
         {
-            this.accessRights = (DERApplicationSpecific)obj;
+            this.accessRights = (ASN1ApplicationSpecific)obj;
         	authorization = Converter.ByteArrayToLong(accessRights.getContents());
         }
         else
@@ -173,12 +174,12 @@ public class CertificateHolderAuthorization
     }
 
     /**
-     * create an Iso7816CertificateHolderAuthorization according to the {@link DERApplicationSpecific}
+     * create an Iso7816CertificateHolderAuthorization according to the {@link ASN1ApplicationSpecific}
      *
-     * @param aSpe the DERApplicationSpecific containing the data
+     * @param aSpe the ASN1ApplicationSpecific containing the data
      * @throws IOException
      */
-    public CertificateHolderAuthorization(DERApplicationSpecific aSpe)
+    public CertificateHolderAuthorization(ASN1ApplicationSpecific aSpe)
         throws IOException
     {
         if (aSpe.getApplicationTag() == EACTags.CERTIFICATE_HOLDER_AUTHORIZATION_TEMPLATE)
@@ -210,7 +211,7 @@ public class CertificateHolderAuthorization
     }
 
     /**
-     * create a DERApplicationSpecific and set the access rights to "rights"
+     * create a ASN1ApplicationSpecific and set the access rights to "rights"
      *
      * @param rights byte containing the rights.
      */
@@ -238,7 +239,7 @@ public class CertificateHolderAuthorization
     }
 
     /**
-     * return the Certificate Holder Authorization as a DERApplicationSpecific Object
+     * return the Certificate Holder Authorization as a ASN1ApplicationSpecific Object
      */
     @Override
 	public ASN1Primitive toASN1Primitive()

@@ -206,7 +206,7 @@ public class MasterListParser {
 		List<Certificate> result = new ArrayList<Certificate>();
 
 		// The signer certifcate(s)
-		Store certStore = cmsSignedData.getCertificates();
+		Store<X509CertificateHolder> certStore = cmsSignedData.getCertificates();
 		
 		JcaX509CertificateConverter converter = new JcaX509CertificateConverter();
 		converter.setProvider("BC");

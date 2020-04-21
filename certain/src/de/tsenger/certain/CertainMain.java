@@ -31,12 +31,12 @@ import de.tsenger.tools.HexString;
 
 /**
  * @author Tobias Senger
- * @version 0.95 build 190904
+ * @version 0.96 build 200421
  *
  */
 public class CertainMain {
 	
-	private static final String version = "0.95 build 190904";
+	private static final String version = "0.96 build 200421";
 	
 	private static JCommander jcmdr;
 

@@ -49,11 +49,11 @@ public class SignedDataVerifier {
 	 */
 	public boolean signatureVerified(CMSSignedData cmsData) throws CertificateException, OperatorCreationException, CMSException {
 
-		Store certs = cmsData.getCertificates();
+		Store<X509CertificateHolder> certs = cmsData.getCertificates();
 		SignerInformationStore signers = cmsData.getSignerInfos();
 
-		Collection c = signers.getSigners();
-		Iterator it = c.iterator();
+		Collection<?> c = signers.getSigners();
+		Iterator<?> it = c.iterator();
 
 		SignerInformation signer = (SignerInformation) it.next();
 		

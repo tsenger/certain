@@ -8,6 +8,7 @@ import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.DERApplicationSpecific;
+import org.bouncycastle.asn1.ASN1ApplicationSpecific;
 import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DERTaggedObject;
@@ -35,11 +36,11 @@ public class DiscretionaryDataTemplate extends ASN1Object {
 
 	}
 
-	private DiscretionaryDataTemplate(DERApplicationSpecific appSpe) throws IOException {
+	private DiscretionaryDataTemplate(ASN1ApplicationSpecific appSpe) throws IOException {
 		setDiscretionaryData(appSpe);
 	}
 
-	private void setDiscretionaryData(DERApplicationSpecific appSpe) throws IOException {
+	private void setDiscretionaryData(ASN1ApplicationSpecific appSpe) throws IOException {
 		if (appSpe.getApplicationTag() == EACTags.DISCRETIONARY_DATA_TEMPLATE) {
 
 			ASN1InputStream content = new ASN1InputStream(appSpe.getContents());
@@ -50,8 +51,8 @@ public class DiscretionaryDataTemplate extends ASN1Object {
 				if (tmpObj instanceof ASN1ObjectIdentifier)
 					oid = ASN1ObjectIdentifier.getInstance(tmpObj);
 
-				else if (tmpObj instanceof DERApplicationSpecific) {
-					DERApplicationSpecific aSpe = (DERApplicationSpecific) tmpObj;
+				else if (tmpObj instanceof ASN1ApplicationSpecific) {
+					ASN1ApplicationSpecific aSpe = (ASN1ApplicationSpecific) tmpObj;
 					if (aSpe.getApplicationTag() == EACTags.DISCRETIONARY_DATA) {
 						dataContent = aSpe.getContents();
 					} else {
@@ -94,7 +95,7 @@ public class DiscretionaryDataTemplate extends ASN1Object {
 		if (obj instanceof DiscretionaryDataTemplate) {
 			return (DiscretionaryDataTemplate) obj;
 		} else if (obj != null) {
-			return new DiscretionaryDataTemplate(DERApplicationSpecific.getInstance(obj));
+			return new DiscretionaryDataTemplate(ASN1ApplicationSpecific.getInstance(obj));
 		}
 
 		return null;

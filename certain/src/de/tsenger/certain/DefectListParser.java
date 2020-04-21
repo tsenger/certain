@@ -8,7 +8,7 @@ import org.bouncycastle.asn1.ASN1Integer;
 import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1OctetString;
-import org.bouncycastle.asn1.DEREnumerated;
+import org.bouncycastle.asn1.ASN1Enumerated;
 import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DLSet;
 import org.bouncycastle.asn1.cms.IssuerAndSerialNumber;
@@ -65,7 +65,7 @@ public class DefectListParser extends DListParser{
 				
 				if (id_defectType.equals(BSIObjectIdentifiers.certRevoked)) {
 					sw.write("+ Authentication Deviation: DS certificate revoked (OID: "+id_defectType+")");
-					DEREnumerated statusCode = (DEREnumerated)knownDefect.getParameters();
+					ASN1Enumerated statusCode = (ASN1Enumerated)knownDefect.getParameters();
 					
 					switch (statusCode.getValue().intValue()) {
 					case 0: sw.write("\tno details given (status code 0: noIndication)\n");
@@ -124,7 +124,7 @@ public class DefectListParser extends DListParser{
 					sw.write("+ General Document Defects: Card Security Object malformed (OID: "+id_defectType+")\n");
 					DERSequence cardSecurity = (DERSequence)knownDefect.getParameters();
 					sw.write("\tSize of new CardSecurity: "+cardSecurity.size()+"\n");
-					//TODO Print whole new DS cert is showDetails is set
+					//TODO Print whole new DS cert if showDetails is set
 				} else if (id_defectType.equals(BSIObjectIdentifiers.ChipSecurityMalformed)) {
 					sw.write("+ General Document Defects: Chip Security Object malformed (OID: "+id_defectType+")\n");
 				} else if (id_defectType.equals(BSIObjectIdentifiers.PowerDownReq)) {

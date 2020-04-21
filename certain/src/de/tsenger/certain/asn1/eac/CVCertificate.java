@@ -11,6 +11,7 @@ import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1ParsingException;
 import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.DERApplicationSpecific;
+import org.bouncycastle.asn1.ASN1ApplicationSpecific;
 import org.bouncycastle.asn1.DEROctetString;
 
 import de.tsenger.tools.Converter;
@@ -40,10 +41,10 @@ public class CVCertificate  extends ASN1Object
     /**
      * Sets the values of the certificate (body and signature).
      *
-     * @param appSpe is a DERApplicationSpecific object containing body and signature.
+     * @param appSpe is a ASN1ApplicationSpecific object containing body and signature.
      * @throws IOException if tags or value are incorrect.
      */
-    private void setPrivateData(DERApplicationSpecific appSpe)
+    private void setPrivateData(ASN1ApplicationSpecific appSpe)
         throws IOException
     {
         valid = 0;
@@ -53,10 +54,10 @@ public class CVCertificate  extends ASN1Object
             ASN1Primitive tmpObj;
             while ((tmpObj = content.readObject()) != null)
             {
-                DERApplicationSpecific aSpe;
-                if (tmpObj instanceof DERApplicationSpecific)
+                ASN1ApplicationSpecific aSpe;
+                if (tmpObj instanceof ASN1ApplicationSpecific)
                 {
-                    aSpe = (DERApplicationSpecific)tmpObj;
+                    aSpe = (ASN1ApplicationSpecific)tmpObj;
                     switch (aSpe.getApplicationTag())
                     {
                     case EACTags.CERTIFICATE_CONTENT_TEMPLATE:
@@ -104,9 +105,9 @@ public class CVCertificate  extends ASN1Object
         ASN1Primitive obj;
         while ((obj = aIS.readObject()) != null)
         {
-            if (obj instanceof DERApplicationSpecific)
+            if (obj instanceof ASN1ApplicationSpecific)
             {
-                setPrivateData((DERApplicationSpecific)obj);
+                setPrivateData((ASN1ApplicationSpecific)obj);
             }
             else
             {
@@ -116,13 +117,13 @@ public class CVCertificate  extends ASN1Object
     }
 
     /**
-     * Create an iso7816Certificate structure from a DERApplicationSpecific.
+     * Create an iso7816Certificate structure from a ASN1ApplicationSpecific.
      *
-     * @param appSpe the DERApplicationSpecific object.
-     * @return the Iso7816CertificateStructure represented by the DERApplicationSpecific object.
+     * @param appSpe the ASN1ApplicationSpecific object.
+     * @return the Iso7816CertificateStructure represented by the ASN1ApplicationSpecific object.
      * @throws IOException if there is a problem parsing the data.
      */
-    private CVCertificate(DERApplicationSpecific appSpe)
+    private CVCertificate(ASN1ApplicationSpecific appSpe)
         throws IOException
     {
         setPrivateData(appSpe);
@@ -163,7 +164,7 @@ public class CVCertificate  extends ASN1Object
         {
             try
             {
-                return new CVCertificate(DERApplicationSpecific.getInstance(obj));
+                return new CVCertificate(ASN1ApplicationSpecific.getInstance(obj));
             }
             catch (IOException e)
             {

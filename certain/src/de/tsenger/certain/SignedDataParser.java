@@ -233,7 +233,7 @@ public class SignedDataParser {
 		List<Certificate> result = new ArrayList<Certificate>();
 
 		// The signer certifcate(s)
-		Store certStore = signedData.getCertificates();
+		Store<X509CertificateHolder> certStore = signedData.getCertificates();
 		
 		JcaX509CertificateConverter converter = new JcaX509CertificateConverter();
 		converter.setProvider("BC");

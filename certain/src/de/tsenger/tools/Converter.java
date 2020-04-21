@@ -111,38 +111,5 @@ public class Converter {
 			return array;
 	}
 
-	/**
-	 * Dekodiert aus dem übergebenen Byte-Array einen ECPoint. Das benötigte
-	 * prime field p wird aus der übergebenen Kurve übernommen Das erste Byte
-	 * muss den Wert 0x04 enthalten (uncompressed point).
-	 * 
-	 * @param value
-	 *            Byte Array der Form {0x04 || x-Bytes[] || y-Bytes[]}
-	 * @param curve
-	 *            Die Kurve auf der der Punkt liegen soll.
-	 * @return Point generiert aus den Input-Daten
-	 * @throws IllegalArgumentException
-	 *             Falls das erste Byte nicht den Wert 0x04 enthält, enthält das
-	 *             übergebene Byte-Array offensichtlich keinen unkomprimierten Punkt
-	 */
-	public static ECPoint byteArrayToECPoint(byte[] value, ECCurve.Fp curve)
-			throws IllegalArgumentException {
-		byte[] x = new byte[(value.length - 1) / 2];
-		byte[] y = new byte[(value.length - 1) / 2];
-		if (value[0] != (byte) 0x04)
-			throw new IllegalArgumentException("No uncompressed Point found!");
-		else {
-			System.arraycopy(value, 1, x, 0, (value.length - 1) / 2);
-			System.arraycopy(value, 1 + ((value.length - 1) / 2), y, 0,
-					(value.length - 1) / 2);
-			ECFieldElement.Fp xE = new ECFieldElement.Fp(curve.getQ(),
-					new BigInteger(1, x));
-			ECFieldElement.Fp yE = new ECFieldElement.Fp(curve.getQ(),
-					new BigInteger(1, y));
-			ECPoint point = new ECPoint.Fp(curve, xE, yE);
-			return point;
-		}
-
-	}
 
 }
