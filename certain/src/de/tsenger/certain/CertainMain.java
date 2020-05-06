@@ -235,13 +235,17 @@ public class CertainMain {
 			CVCertificate cvcaCert = certStore.getCertByCHR(cvcaChrStr);
 			CVCertificate parentCert = certStore.getCertByCHR(cert.getCarString());
 			
+			// If a CVCA is available
 			if (cvcaCert!=null) {
 				try {
-					if (!cert.getRoleDescription().equals("CVCA")) // Terminal or DV
+					/* if cert is not an CVCA and it uses ECDSA algorithm, 
+					 * then it doesn't contain the complete EC curve parameter
+					 *  so that we have to use the EC curve parameters from the parent CVCA certificate */
+					if ((!cert.getRoleDescription().equals("CVCA"))&&cert.getBody().getPublicKey().getUsage().on(EACObjectIdentifiers.id_TA_ECDSA)) // Terminal or DV certificate
 					{
 						verifier = new CertVerifier(cvcaCert.getBody().getPublicKey(),parentCert.getBody().getPublicKey());
 					}
-					else {	// CVCA certifcate
+					else {	// CVCA certificate or signature algorithm is RSA 
 						verifier = new CertVerifier(cvcaCert.getBody().getPublicKey());
 					}
 					System.out.println("Signature is " + (verifier.hasValidSignature(cert) ? "VALID" : "!!! INVALID !!!"));
