@@ -25,24 +25,30 @@ public class CVCertificateRequest extends ASN1Object
     private byte[] innerSignature = null;
     private byte[] outerSignature = null;
 
-    private CVCertificateRequest(ASN1ApplicationSpecific request)  throws IOException
-    {
-//        if (request.getApplicationTag() == EACTags.AUTHENTIFICATION_DATA)
-    	if (request.getApplicationTag() == 7)
-        {
-            ASN1Sequence seq = ASN1Sequence.getInstance(request.getObject(BERTags.SEQUENCE));
+	private CVCertificateRequest(ASN1ApplicationSpecific request) throws IOException {
 
-            initCertBody(ASN1ApplicationSpecific.getInstance(seq.getObjectAt(0)));
-            
-            outerCAR = new CertificationAuthorityReference(ASN1ApplicationSpecific.getInstance(seq.getObjectAt(1)).getContents());
+		if (request.getApplicationTag() == 7) {
+			ASN1Sequence seq = ASN1Sequence.getInstance(request.getObject(BERTags.SEQUENCE));
 
-            outerSignature = ASN1ApplicationSpecific.getInstance(seq.getObjectAt(seq.size() - 1)).getContents();
-        }
-        else
-        {
-            initCertBody(request);
-        }
-    }
+			try {
+				outerCAR = new CertificationAuthorityReference("!!! MISSING CAR DATA OBJECT !!!".getBytes());
+				for (int i = 0; i < seq.size(); i++) {
+					int tag = ASN1ApplicationSpecific.getInstance(seq.getObjectAt(i)).getApplicationTag();
+					if (tag == 0x21)
+						initCertBody(ASN1ApplicationSpecific.getInstance(seq.getObjectAt(i)));
+					else if (tag == 0x2)
+						outerCAR = new CertificationAuthorityReference(
+								ASN1ApplicationSpecific.getInstance(seq.getObjectAt(i)).getContents());
+					else if (tag == 0x37)
+						outerSignature = ASN1ApplicationSpecific.getInstance(seq.getObjectAt(i)).getContents();
+
+				}
+			} catch (IllegalArgumentException e) {
+				throw new IOException("Didn't found a valid CVCertificate request!");
+			}
+
+		} else initCertBody(request);
+	}
 
     private void initCertBody(ASN1ApplicationSpecific request)
         throws IOException
