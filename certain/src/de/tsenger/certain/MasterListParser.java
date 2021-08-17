@@ -110,7 +110,7 @@ public class MasterListParser {
 		int i=0;
 		
 		
-		sw.append("\nThis Master List contains "+cscaCerts.size()+" CSCA certificates. \nand "+masterListSignerCertificates.size()+" Master List Signer Certificates.");
+		sw.append("\nThis Master List contains "+cscaCerts.size()+" CSCA certificates. \nand "+masterListSignerCertificates.size()+" Master List Signer Certificates.\n\n");
 		
 		for (Certificate mlSigner : masterListSignerCertificates) {
 			sw.append("+++++++++++++ Masterlist Signer Cert no. "+(++i)+" ++++++++++++++\n");
