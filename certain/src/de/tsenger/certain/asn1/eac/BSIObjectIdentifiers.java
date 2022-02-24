@@ -345,6 +345,7 @@ public interface BSIObjectIdentifiers {
 	public static final ASN1ObjectIdentifier pdfFormat = description.branch("3");
 	public static final ASN1ObjectIdentifier sector = extensions.branch("2");
 	public static final ASN1ObjectIdentifier PS_sector = extensions.branch("3");
+	public static final ASN1ObjectIdentifier uif = extensions.branch("4");
 	
 	public static final ASN1ObjectIdentifier auxiliaryData = mrtd.branch("4");
 	public static final ASN1ObjectIdentifier DateOfBirth = auxiliaryData.branch("1");

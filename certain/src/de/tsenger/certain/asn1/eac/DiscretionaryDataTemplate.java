@@ -28,6 +28,7 @@ public class DiscretionaryDataTemplate extends ASN1Object {
     	ExtensionType.put(BSIObjectIdentifiers.description, "Hash of Certificate Description");
     	ExtensionType.put(BSIObjectIdentifiers.sector, "Terminal Sector for RI");
     	ExtensionType.put(BSIObjectIdentifiers.PS_sector, "Terminal Sector for Pseudonymous Signatures");
+    	ExtensionType.put(BSIObjectIdentifiers.uif, "UiF - Update im Feld");
     }
 
 	public DiscretionaryDataTemplate(ASN1ObjectIdentifier oid, byte[] data) {
@@ -48,8 +49,9 @@ public class DiscretionaryDataTemplate extends ASN1Object {
 
 			while ((tmpObj = content.readObject()) != null) {
 
-				if (tmpObj instanceof ASN1ObjectIdentifier)
+				if (tmpObj instanceof ASN1ObjectIdentifier) {
 					oid = ASN1ObjectIdentifier.getInstance(tmpObj);
+				}
 
 				else if (tmpObj instanceof ASN1ApplicationSpecific) {
 					ASN1ApplicationSpecific aSpe = (ASN1ApplicationSpecific) tmpObj;

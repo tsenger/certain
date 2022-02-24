@@ -3,6 +3,7 @@ package de.tsenger.certain;
 import java.io.StringWriter;
 
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.util.encoders.Hex;
 
 import de.tsenger.certain.asn1.eac.CertificateBody;
 import de.tsenger.certain.asn1.eac.CertificateExtensions;
@@ -166,7 +167,10 @@ public class CertParser {
 			sw = new StringWriter();
 			for (DiscretionaryDataTemplate ddt : extensions.getDiscretionaryDataTemplateList()) {
 				byte[] ddtValue = ddt.getDataContent();
-				sw.write(ddt.getExtensionDescription()+": " +(ddtValue.length>16?"\n":"")+HexString.bufferToHex(ddtValue, true)+"\n");			
+				if (ddtValue!=null)
+					sw.write(ddt.getExtensionDescription()+ " (OID: " + ddt.getOid().toString() +"): " +(ddtValue.length>16?"\n":"")+HexString.bufferToHex(ddtValue, true)+"\n");
+				else
+					sw.write(ddt.getExtensionDescription() + " (OID: " + ddt.getOid().toString() + ")\n");
 			}
 			extentensionsStr = sw.toString();
 		}
