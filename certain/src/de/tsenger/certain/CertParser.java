@@ -149,7 +149,9 @@ public class CertParser {
 		}
 		else if(isCertificate) {
 			terminalType = chat.getTerminalTypeDescription();
-			authorizationBitStr = Long.toBinaryString(Converter.ByteArrayToLong(chat.getAccessRights()));
+			String binaryString = Long.toBinaryString(Converter.ByteArrayToLong(chat.getAccessRights()));
+			binaryString = String.format("%40s", binaryString).replace(' ', '0');
+			authorizationBitStr = binaryString.replaceAll("(.{8})", "$1 ");
 			authorizationStr = authorizationToString(chat);
 		}
 		
