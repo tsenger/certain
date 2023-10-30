@@ -51,9 +51,11 @@ public class CertificateHolderAuthorization
     public static final long AT_WADG19 = 0x0000000800000000L;
     public static final long AT_WADG20 = 0x0000000400000000L;
     public static final long AT_WADG21 = 0x0000000200000000L;
+    public static final long AT_WADG22 = 0x0000000100000000L;
     
+    public static final long AT_RADG22 = 0x0000000020000000L;//Read Access to DG22
     public static final long AT_RADG21 = 0x0000000010000000L;//Read Access to DG21
-    public static final long AT_RADG20 = 0x0000000008000000L;//Read Access to DG21
+    public static final long AT_RADG20 = 0x0000000008000000L;//Read Access to DG20
     public static final long AT_RADG19 = 0x0000000004000000L;
     public static final long AT_RADG18 = 0x0000000002000000L;
     public static final long AT_RADG17 = 0x0000000001000000L;
@@ -67,7 +69,7 @@ public class CertificateHolderAuthorization
     public static final long AT_RADG10 = 0x0000000000020000L;
     public static final long AT_RADG9 =  0x0000000000010000L;
     
-    public static final long AT_RADG8 = 	0x0000000000008000L;
+    public static final long AT_RADG8 =  0x0000000000008000L;
     public static final long AT_RADG7 =  0x0000000000004000L;
     public static final long AT_RADG6 =  0x0000000000002000L;
     public static final long AT_RADG5 =  0x0000000000001000L;
@@ -76,14 +78,15 @@ public class CertificateHolderAuthorization
     public static final long AT_RADG2 =  0x0000000000000200L;
     public static final long AT_RADG1 =  0x0000000000000100L;
     
-    public static final long AT_IQCERT = 0x0000000000000080L;//Install Qualified Certificte
-    public static final long AT_ICERT =  0x0000000000000040L;//Install Certificate
-    public static final long AT_PINMGNT =0x0000000000000020L;//PIN Management
-    public static final long AT_CAN =    0x0000000000000010L;//CAN allowed
+    public static final long AT_PSA = 	   0x0000000040000000L;//PSA
+    public static final long AT_IQCERT =   0x0000000000000080L;//Install Qualified Certificate
+    public static final long AT_ICERT =    0x0000000000000040L;//Install Certificate
+    public static final long AT_PINMGNT =  0x0000000000000020L;//PIN Management
+    public static final long AT_CAN =      0x0000000000000010L;//CAN allowed
     public static final long AT_PRIVTERM = 0x0000000000000008L;//Privileged Terminal
-    public static final long AT_RI =     0x0000000000000004L;//Restricted Identification
-    public static final long AT_COMIDVRF = 0x0000000000000002L;//Community ID Verification
-    public static final long AT_AGEVRF = 0x0000000000000001L;//Age Verification
+    public static final long AT_RI =       0x0000000000000004L;//Restricted Identification
+    public static final long AT_COMIDVRF = 0x0000000000000002L;//Municipality ID Verification
+    public static final long AT_AGEVRF =   0x0000000000000001L;//Age Verification
        
 
     static BidirectionalMap AuthorizationRole = new BidirectionalMap();

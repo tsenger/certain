@@ -215,7 +215,8 @@ public class CertParser {
 					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG18)?"18, ":"")+
 					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG19)?"19, ":"")+
 					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG20)?"20, ":"")+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG21)?"21":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG21)?"21, ":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG22)?"22":"")+
 					"\n"
 			);
 			sw.write("Write access to DG "+
@@ -223,16 +224,18 @@ public class CertParser {
 					(chat.hasAuth(CertificateHolderAuthorization.AT_WADG18)?"18, ":"")+
 					(chat.hasAuth(CertificateHolderAuthorization.AT_WADG19)?"19, ":"")+
 					(chat.hasAuth(CertificateHolderAuthorization.AT_WADG20)?"20, ":"")+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_WADG21)?"21":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_WADG21)?"21, ":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_WADG22)?"22":"")+
 					"\n"
 			);
+			sw.write(chat.hasAuth(CertificateHolderAuthorization.AT_PSA)?"PSA\n":"");
 			sw.write(chat.hasAuth(CertificateHolderAuthorization.AT_IQCERT)?"Install Qualified Certificate\n":"");
 			sw.write(chat.hasAuth(CertificateHolderAuthorization.AT_ICERT)?"Install Certificate\n":"");
 			sw.write(chat.hasAuth(CertificateHolderAuthorization.AT_PINMGNT)?"PIN Management\n":"");
 			sw.write(chat.hasAuth(CertificateHolderAuthorization.AT_CAN)?"CAN allowed\n":"");
 			sw.write(chat.hasAuth(CertificateHolderAuthorization.AT_PRIVTERM)?"Privileged Terminal\n":"");
 			sw.write(chat.hasAuth(CertificateHolderAuthorization.AT_RI)?"Restricted Identification\n":"");
-			sw.write(chat.hasAuth(CertificateHolderAuthorization.AT_COMIDVRF)?"Community ID Verification\n":"");
+			sw.write(chat.hasAuth(CertificateHolderAuthorization.AT_COMIDVRF)?"Municipality ID Verification\n":"");
 			sw.write(chat.hasAuth(CertificateHolderAuthorization.AT_AGEVRF)?"Age Verification\n":"");
 		} 
 		else if (chat.getOid().equals(CertificateHolderAuthorization.id_IS)) {
