@@ -46,12 +46,12 @@ public class CertificateBody  extends ASN1Object
 {
     ASN1InputStream seq;
     private ASN1ApplicationSpecific certificateProfileIdentifier;// version of the certificate format. Must be 0 (version 1)
-    private ASN1ApplicationSpecific certificationAuthorityReference;//uniquely identifies the issuinng CA's signature key pair
+    private ASN1ApplicationSpecific certificationAuthorityReference;//uniquely identifies the issuing CA's signature key pair
     private PublicKeyDataObject publicKey;// stores the encoded public key
     private ASN1ApplicationSpecific certificateHolderReference;//associates the public key contained in the certificate with a unique name
     private CertificateHolderAuthorization certificateHolderAuthorization;// Encodes the role of the holder (i.e. CVCA, DV, IS) and assigns read/write access rights to data groups storing sensitive data
     private ASN1ApplicationSpecific certificateEffectiveDate;// the date of the certificate generation
-    private ASN1ApplicationSpecific certificateExpirationDate;// the date after wich the certificate expires
+    private ASN1ApplicationSpecific certificateExpirationDate;// the date after which the certificate expires
     private CertificateExtensions certificateExtensions;
     private int certificateType = 0;// bit field of initialized data. This will tell us if the data are valid.
     private static final int CPI = 0x01;//certificate Profile Identifier

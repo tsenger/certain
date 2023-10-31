@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>de.tsenger</groupId>
 	<artifactId>certain</artifactId>
-	<version>0.99 build 220224</version>
+	<version>1.0.0</version>
 	<name>certain</name>
 	<description>certain is a command line CV certificate parser written in Java. It parses card verifiable certificates as specified in BSI TR-03110 and verifies the contained signatures. </description>
 	<build>
@@ -79,7 +79,7 @@
 		<dependency>
 			<groupId>org.bouncycastle</groupId>
 			<artifactId>bcpkix-jdk15to18</artifactId>
-			<version>1.69</version>
+			<version>1.74</version>
 		</dependency>
 		<dependency>
 			<groupId>com.beust</groupId>

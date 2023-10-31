@@ -4,7 +4,7 @@
   <groupId>de.tsenger</groupId>
   <artifactId>certain</artifactId>
   <name>certain</name>
-  <version>0.98 build 210817</version>
+  <version>1.0.0</version>
   <description>certain is a command line CV certificate parser written in Java. It parses card verifiable certificates as specified in BSI TR-03110 and verifies the contained signatures.</description>
   <build>
     <sourceDirectory>src</sourceDirectory>
