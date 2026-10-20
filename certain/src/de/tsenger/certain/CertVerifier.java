@@ -25,10 +25,10 @@ import org.bouncycastle.operator.OperatorCreationException;
 
 import de.tsenger.certain.asn1.eac.CVCertificate;
 import de.tsenger.certain.asn1.eac.CVCertificateRequest;
-import de.tsenger.certain.asn1.eac.EACObjectIdentifiers;
-import de.tsenger.certain.asn1.eac.ECDSAPublicKey;
-import de.tsenger.certain.asn1.eac.PublicKeyDataObject;
-import de.tsenger.certain.asn1.eac.RSAPublicKey;
+import org.bouncycastle.asn1.eac.EACObjectIdentifiers;
+import org.bouncycastle.asn1.eac.ECDSAPublicKey;
+import org.bouncycastle.asn1.eac.PublicKeyDataObject;
+import org.bouncycastle.asn1.eac.RSAPublicKey;
 
 public class CertVerifier {
 
@@ -198,7 +198,7 @@ public class CertVerifier {
 	}
 
 	private ECParameterSpec getParams(ECDSAPublicKey key) throws EACException {
-		if (!key.hasDomainParameters()) {
+		if (!key.hasParameters()) {
 			throw new EACException("Public key does not contain EC Params");
 		}
 

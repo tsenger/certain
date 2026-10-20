@@ -1,6 +1,7 @@
 //package org.bouncycastle.asn1.eac;
 package de.tsenger.certain.asn1.eac;
 
+
 import java.io.IOException;
 
 import org.bouncycastle.asn1.ASN1ApplicationSpecific;
@@ -10,6 +11,8 @@ import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.DERApplicationSpecific;
+import org.bouncycastle.asn1.eac.BidirectionalMap;
+import org.bouncycastle.asn1.eac.EACObjectIdentifiers;
 
 import de.tsenger.tools.Converter;
 

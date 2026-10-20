@@ -1,6 +1,8 @@
 package de.tsenger.certain;
 
 import java.io.StringWriter;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.util.encoders.Hex;
@@ -8,19 +10,34 @@ import org.bouncycastle.util.encoders.Hex;
 import de.tsenger.certain.asn1.eac.CertificateBody;
 import de.tsenger.certain.asn1.eac.CertificateExtensions;
 import de.tsenger.certain.asn1.eac.CertificateHolderAuthorization;
-import de.tsenger.certain.asn1.eac.CertificateHolderReference;
-import de.tsenger.certain.asn1.eac.CertificationAuthorityReference;
+import org.bouncycastle.asn1.eac.CertificateHolderReference;
+import org.bouncycastle.asn1.eac.CertificationAuthorityReference;
 import de.tsenger.certain.asn1.eac.DiscretionaryDataTemplate;
-import de.tsenger.certain.asn1.eac.EACObjectIdentifiers;
-import de.tsenger.certain.asn1.eac.ECDSAPublicKey;
-import de.tsenger.certain.asn1.eac.PackedDate;
-import de.tsenger.certain.asn1.eac.PublicKeyDataObject;
-import de.tsenger.certain.asn1.eac.RSAPublicKey;
+import org.bouncycastle.asn1.eac.EACObjectIdentifiers;
+import org.bouncycastle.asn1.eac.ECDSAPublicKey;
+import org.bouncycastle.asn1.eac.PackedDate;
+import org.bouncycastle.asn1.eac.PublicKeyDataObject;
+import org.bouncycastle.asn1.eac.RSAPublicKey;
 import de.tsenger.tools.Converter;
 import de.tsenger.tools.HexString;
 
 public class CertParser {
-	
+
+	/** Names of the Terminal Authentication algorithms, printed next to the public key OID. */
+	private static final Map<ASN1ObjectIdentifier, String> ALGORITHM_NAMES = new HashMap<ASN1ObjectIdentifier, String>();
+	static {
+		ALGORITHM_NAMES.put(EACObjectIdentifiers.id_TA_RSA_v1_5_SHA_1, "id_TA_RSA_v1_5_SHA_1");
+		ALGORITHM_NAMES.put(EACObjectIdentifiers.id_TA_RSA_v1_5_SHA_256, "id_TA_RSA_v1_5_SHA_256");
+		ALGORITHM_NAMES.put(EACObjectIdentifiers.id_TA_RSA_PSS_SHA_1, "id_TA_RSA_PSS_SHA_1");
+		ALGORITHM_NAMES.put(EACObjectIdentifiers.id_TA_RSA_PSS_SHA_256, "id_TA_RSA_PSS_SHA_256");
+		ALGORITHM_NAMES.put(EACObjectIdentifiers.id_TA_RSA_v1_5_SHA_512, "id_TA_RSA_v1_5_SHA_512");
+		ALGORITHM_NAMES.put(EACObjectIdentifiers.id_TA_RSA_PSS_SHA_512, "id_TA_RSA_PSS_SHA_512");
+		ALGORITHM_NAMES.put(EACObjectIdentifiers.id_TA_ECDSA_SHA_1, "id_TA_ECDSA_SHA_1");
+		ALGORITHM_NAMES.put(EACObjectIdentifiers.id_TA_ECDSA_SHA_224, "id_TA_ECDSA_SHA_224");
+		ALGORITHM_NAMES.put(EACObjectIdentifiers.id_TA_ECDSA_SHA_256, "id_TA_ECDSA_SHA_256");
+		ALGORITHM_NAMES.put(EACObjectIdentifiers.id_TA_ECDSA_SHA_384, "id_TA_ECDSA_SHA_384");
+		ALGORITHM_NAMES.put(EACObjectIdentifiers.id_TA_ECDSA_SHA_512, "id_TA_ECDSA_SHA_512");
+	}
 
 	private CertificateBody body;
 	private byte[] profileId;
@@ -101,11 +118,11 @@ public class CertParser {
 		pubKey = body.getPublicKey();
 		pubKeyOid = pubKey.getUsage();
 		StringWriter sw = new StringWriter();
-		sw.write("OID : "+pubKeyOid + " ("+pubKey.getAlgorithmName()+")\n");
+		sw.write("OID : "+pubKeyOid + " ("+ALGORITHM_NAMES.get(pubKeyOid)+")\n");
 		if (pubKeyOid.on(EACObjectIdentifiers.id_TA_ECDSA)) {
 			ECDSAPublicKey pk = (ECDSAPublicKey) pubKey;
 			if ((certRole!=null&&certRole.equals("CVCA"))||!isCertificate) {
-				if (pk.hasDomainParameters()) { 
+				if (pk.hasParameters()) { 
 					byte[] p = Converter.cutLeadingZero(pk.getPrimeModulusP().toByteArray());
 					byte[] a = Converter.cutLeadingZero(pk.getFirstCoefA().toByteArray());
 					byte[] b = Converter.cutLeadingZero(pk.getSecondCoefB().toByteArray());

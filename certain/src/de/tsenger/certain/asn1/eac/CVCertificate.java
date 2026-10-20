@@ -13,8 +13,10 @@ import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.DERApplicationSpecific;
 import org.bouncycastle.asn1.ASN1ApplicationSpecific;
 import org.bouncycastle.asn1.DEROctetString;
+import org.bouncycastle.asn1.eac.CertificateHolderReference;
+import org.bouncycastle.asn1.eac.CertificationAuthorityReference;
+import org.bouncycastle.asn1.eac.PackedDate;
 
-import de.tsenger.tools.Converter;
 
 
 /**
@@ -312,18 +314,6 @@ public class CVCertificate  extends ASN1Object
         return rights;
     }
 
-    /**
-     * @return the bits corresponding the authorizations contained in the certificate
-     *         See Iso7816CertificateHolderAuthorization static int for values
-     * @throws IOException
-     */
-    public Flags getHolderAuthorizationRights()
-        throws IOException
-    {
-    	byte[] accessRights = certificateBody.getCertificateHolderAuthorization().getAccessRights();
-    	accessRights[0]  &= 0x3F;
-        return new Flags(Converter.ByteArrayToLong(accessRights));
-    }
     
     @Override
 	public String toString() {

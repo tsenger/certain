@@ -12,7 +12,7 @@ import java.util.Hashtable;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 
 import de.tsenger.certain.asn1.eac.CertificateBody;
-import de.tsenger.certain.asn1.eac.EACObjectIdentifiers;
+import org.bouncycastle.asn1.eac.EACObjectIdentifiers;
 
 public class CVSigner {
 

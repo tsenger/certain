@@ -9,8 +9,8 @@ import java.util.Map;
 import java.util.Set;
 
 import de.tsenger.certain.asn1.eac.CVCertificate;
-import de.tsenger.certain.asn1.eac.CertificateHolderReference;
-import de.tsenger.certain.asn1.eac.CertificationAuthorityReference;
+import org.bouncycastle.asn1.eac.CertificateHolderReference;
+import org.bouncycastle.asn1.eac.CertificationAuthorityReference;
 
 public class CertStorage {
 	

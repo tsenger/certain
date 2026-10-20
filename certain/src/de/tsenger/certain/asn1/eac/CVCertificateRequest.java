@@ -1,6 +1,7 @@
 //package org.bouncycastle.asn1.eac;
 package de.tsenger.certain.asn1.eac;
 
+
 import java.io.IOException;
 import java.util.Enumeration;
 
@@ -14,6 +15,8 @@ import org.bouncycastle.asn1.BERTags;
 import org.bouncycastle.asn1.DERApplicationSpecific;
 import org.bouncycastle.asn1.ASN1ApplicationSpecific;
 import org.bouncycastle.asn1.DEROctetString;
+import org.bouncycastle.asn1.eac.CertificationAuthorityReference;
+import org.bouncycastle.asn1.eac.PublicKeyDataObject;
 
 
 public class CVCertificateRequest extends ASN1Object
@@ -31,13 +34,13 @@ public class CVCertificateRequest extends ASN1Object
 			ASN1Sequence seq = ASN1Sequence.getInstance(request.getObject(BERTags.SEQUENCE));
 
 			try {
-				outerCAR = new CertificationAuthorityReference("!!! MISSING CAR DATA OBJECT !!!".getBytes());
+				outerCAR = References.authorityReference("!!! MISSING CAR DATA OBJECT !!!".getBytes());
 				for (int i = 0; i < seq.size(); i++) {
 					int tag = ASN1ApplicationSpecific.getInstance(seq.getObjectAt(i)).getApplicationTag();
 					if (tag == 0x21)
 						initCertBody(ASN1ApplicationSpecific.getInstance(seq.getObjectAt(i)));
 					else if (tag == 0x2)
-						outerCAR = new CertificationAuthorityReference(
+						outerCAR = References.authorityReference(
 								ASN1ApplicationSpecific.getInstance(seq.getObjectAt(i)).getContents());
 					else if (tag == 0x37)
 						outerSignature = ASN1ApplicationSpecific.getInstance(seq.getObjectAt(i)).getContents();

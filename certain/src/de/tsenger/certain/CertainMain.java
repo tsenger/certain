@@ -22,10 +22,10 @@ import com.beust.jcommander.ParameterException;
 import de.tsenger.certain.asn1.eac.CVCertificate;
 import de.tsenger.certain.asn1.eac.CVCertificateRequest;
 import de.tsenger.certain.asn1.eac.CertificateHolderAuthorization;
-import de.tsenger.certain.asn1.eac.EACObjectIdentifiers;
-import de.tsenger.certain.asn1.eac.ECDSAPublicKey;
-import de.tsenger.certain.asn1.eac.PublicKeyDataObject;
-import de.tsenger.certain.asn1.eac.RSAPublicKey;
+import org.bouncycastle.asn1.eac.EACObjectIdentifiers;
+import org.bouncycastle.asn1.eac.ECDSAPublicKey;
+import org.bouncycastle.asn1.eac.PublicKeyDataObject;
+import org.bouncycastle.asn1.eac.RSAPublicKey;
 import de.tsenger.tools.FileSystem;
 import de.tsenger.tools.HexString;
 

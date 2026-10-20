@@ -1,5 +1,6 @@
 package de.tsenger.certain.asn1.eac;
 
+
 import java.io.IOException;
 
 import org.bouncycastle.asn1.ASN1EncodableVector;
@@ -12,6 +13,7 @@ import org.bouncycastle.asn1.ASN1ApplicationSpecific;
 import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DERTaggedObject;
+import org.bouncycastle.asn1.eac.BidirectionalMap;
 
 public class DiscretionaryDataTemplate extends ASN1Object {
 

@@ -1,9 +1,11 @@
 //package org.bouncycastle.asn1.eac;
 package de.tsenger.certain.asn1.eac;
 
+
 import java.io.IOException;
 
 import org.bouncycastle.asn1.ASN1ApplicationSpecific;
+import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1Object;
@@ -11,6 +13,10 @@ import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.BERTags;
 import org.bouncycastle.asn1.DERApplicationSpecific;
 import org.bouncycastle.asn1.DEROctetString;
+import org.bouncycastle.asn1.eac.CertificateHolderReference;
+import org.bouncycastle.asn1.eac.CertificationAuthorityReference;
+import org.bouncycastle.asn1.eac.PackedDate;
+import org.bouncycastle.asn1.eac.PublicKeyDataObject;
 
 
 /**
@@ -180,6 +186,15 @@ public class CertificateBody  extends ASN1Object
     }
 
     /**
+     * Bouncy Castle encodes a public key as a plain sequence, the body adds the public key tag.
+     */
+    private ASN1Encodable encodedPublicKey()
+        throws IOException
+    {
+        return new DERApplicationSpecific(false, EACTags.PUBLIC_KEY, publicKey);
+    }
+
+    /**
      * create a profile type Iso7816CertificateBody.
      *
      * @return return the "profile" type certificate body.
@@ -192,7 +207,7 @@ public class CertificateBody  extends ASN1Object
 
         v.add(certificateProfileIdentifier);
         v.add(certificationAuthorityReference);
-        v.add(publicKey);
+        v.add(encodedPublicKey());
         v.add(certificateHolderReference);
         v.add(certificateHolderAuthorization);
         v.add(certificateEffectiveDate);
@@ -259,7 +274,7 @@ public class CertificateBody  extends ASN1Object
 
         v.add(certificateProfileIdentifier);
         if (certificationAuthorityReference!=null) v.add(certificationAuthorityReference);
-        v.add(publicKey);
+        v.add(encodedPublicKey());
         v.add(certificateHolderReference);
         if (certificateExtensions!=null) v.add(certificateExtensions);
         return new DERApplicationSpecific(EACTags.CERTIFICATE_CONTENT_TEMPLATE, v);
@@ -359,7 +374,7 @@ public class CertificateBody  extends ASN1Object
         if ((this.certificateType & CertificateBody.CEfD) ==
             CertificateBody.CEfD)
         {
-            return new PackedDate(certificateEffectiveDate.getContents());
+            return References.packedDate(certificateEffectiveDate.getContents());
         }
         return null;
     }
@@ -391,7 +406,7 @@ public class CertificateBody  extends ASN1Object
     {
         if ((this.certificateType & CertificateBody.CExD) ==  CertificateBody.CExD)
         {
-            return new PackedDate(certificateExpirationDate.getContents());
+            return References.packedDate(certificateExpirationDate.getContents());
         }
         return null;
     }
@@ -448,7 +463,7 @@ public class CertificateBody  extends ASN1Object
      */
     public CertificateHolderReference getCertificateHolderReference()
     {
-        return new CertificateHolderReference(certificateHolderReference.getContents());
+        return References.holderReference(certificateHolderReference.getContents());
     }
     
     public String getChrString() {
@@ -478,7 +493,7 @@ public class CertificateBody  extends ASN1Object
     {
         if ((this.certificateType & CertificateBody.CAR) == CertificateBody.CAR)
         {
-            return new CertificationAuthorityReference(certificationAuthorityReference.getContents());
+            return References.authorityReference(certificationAuthorityReference.getContents());
         }
         return null;
     }
