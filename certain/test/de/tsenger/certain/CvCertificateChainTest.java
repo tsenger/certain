@@ -62,7 +62,6 @@ public class CvCertificateChainTest {
 		assertChain("dev/ST");
 	}
 
-	@Ignore("Known bug: extension without data (Terminal Sector for RI) cannot be re-encoded, NullPointerException")
 	@Test
 	public void terminalSignatureAuthenticationTerminal() throws Exception {
 		assertTerminalSignature("dev/AT");
