@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -25,6 +26,8 @@ public class CliOutputTest {
 
 	private static final File GOLDEN = new File(TestData.ROOT, "golden");
 	private static final boolean UPDATE = Boolean.getBoolean("golden.update");
+	/** Fixed date for the expiration notes, so that the output does not change over time. */
+	private static final LocalDate TODAY = LocalDate.of(2026, 10, 20);
 
 	@Test
 	public void outputMatchesGoldenFiles() throws Exception {
@@ -91,7 +94,7 @@ public class CliOutputTest {
 		System.setOut(new PrintStream(out, true, "UTF-8"));
 		System.setErr(new PrintStream(err, true, "UTF-8"));
 		try {
-			result = "exit code " + CertainMain.run(args);
+			result = "exit code " + CertainMain.run(TODAY, args);
 		} catch (Throwable t) {
 			// Only the type: messages and stack traces contain class names and line numbers that change with refactorings.
 			result = "EXCEPTION " + t.getClass().getName();

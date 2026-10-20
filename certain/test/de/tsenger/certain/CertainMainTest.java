@@ -9,6 +9,7 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.security.KeyPair;
+import java.time.LocalDate;
 
 import org.bouncycastle.asn1.eac.CertificateHolderAuthorization;
 import org.junit.After;
@@ -119,5 +120,14 @@ public class CertainMainTest {
 	public void version() {
 		assertEquals(CertainMain.EXIT_OK, CertainMain.run("--version"));
 		assertTrue(stdout(), stdout().matches("certain \\d+\\.\\d+\\.\\d+\\R"));
+	}
+
+	@Test
+	public void expiredCertificateIsOnlyNoted() {
+		// The test certificates expire on 2030-01-01
+		assertEquals(CertainMain.EXIT_OK, CertainMain.run(LocalDate.of(2030, 1, 1), "-c", cvcaFile));
+		assertTrue(!stdout().contains("expired"));
+		assertEquals(CertainMain.EXIT_OK, CertainMain.run(LocalDate.of(2030, 1, 2), "-c", cvcaFile));
+		assertTrue(stdout().contains("Note: this certificate expired on 2030-01-01."));
 	}
 }

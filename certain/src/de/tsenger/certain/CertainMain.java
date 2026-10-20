@@ -5,6 +5,10 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.security.NoSuchAlgorithmException;
 import java.security.Security;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
@@ -81,6 +85,9 @@ public class CertainMain {
 	@Parameter(names = {"--fingerprint", "-f"}, description = "Show MD5, SHA-1, SHA-224 and SHA-256 fingerprints of certificates and requests")
 	private boolean showFingerprints = false;
 
+	/** The date expiration dates are compared with. */
+	private final LocalDate today;
+
 	private final CertStorage certStore = new CertStorage();
 	private CVCertificateRequest dvReq;
 	private CVCertificate linkCert;
@@ -96,6 +103,10 @@ public class CertainMain {
 		T parse(byte[] content) throws Exception;
 	}
 
+	private CertainMain(LocalDate today) {
+		this.today = today;
+	}
+
 	public static void main(String[] args) {
 		System.exit(run(args));
 	}
@@ -106,7 +117,16 @@ public class CertainMain {
 	 * @return the exit code
 	 */
 	public static int run(String... args) {
-		CertainMain cm = new CertainMain();
+		return run(LocalDate.now(ZoneOffset.UTC), args);
+	}
+
+	/**
+	 * Runs certain as of the given date, so that tests do not depend on the current date.
+	 *
+	 * @return the exit code
+	 */
+	static int run(LocalDate today, String... args) {
+		CertainMain cm = new CertainMain(today);
 		JCommander jcmdr = JCommander.newBuilder().addObject(cm).programName("certain").build();
 
 		try {
@@ -277,6 +297,7 @@ public class CertainMain {
 
 			cvParser.setBody(cert.getBody(), true);
 			System.out.println(cvParser.getContentString(showDetails));
+			printExpirationNote(cert);
 
 			if (showDetails) System.out.println("Signature:\n" + HexString.bufferToHex(cert.getSignature(), true));
 
@@ -320,6 +341,7 @@ public class CertainMain {
 
 		cvParser.setBody(linkCert.getBody(), true);
 		System.out.println(cvParser.getContentString(showDetails));
+		printExpirationNote(linkCert);
 
 		if (showDetails) System.out.println("Signature:\n" + HexString.bufferToHex(linkCert.getSignature(), true));
 
@@ -333,6 +355,23 @@ public class CertainMain {
 		print(sdParser.checkSignedData());
 		DListParser dlParser = sdParser.getDListParser();
 		if (dlParser != null) System.out.println(dlParser.getDListInfoString(showDetails));
+	}
+
+	/** Notes an expired certificate; this does not affect the exit code, certain is not a chip with a current date. */
+	private void printExpirationNote(CVCertificate cert) {
+		String date = cert.getBody().getCertificateExpirationDate().toString();
+		LocalDate expiration;
+		try {
+			// YYMMDD in GMT, the year is 20YY (BSI TR-03110 Part 3, D.2.1.3)
+			expiration = LocalDate.parse("20" + date, DateTimeFormatter.BASIC_ISO_DATE);
+		} catch (DateTimeParseException e) {
+			System.out.println("Note: the certificate expiration date " + date + " is not a valid date.\n");
+			return;
+		}
+		if (expiration.isBefore(today)) {
+			System.out.println("Note: this certificate expired on " + expiration + ". Except for CVCA link certificates, "
+					+ "expired certificates are rejected by the certificate validation (BSI TR-03110 Part 3, 2.5.1).\n");
+		}
 	}
 
 	private void printBanner(String name) {
