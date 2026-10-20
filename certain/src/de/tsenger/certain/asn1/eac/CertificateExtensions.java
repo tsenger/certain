@@ -4,13 +4,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1EncodableVector;
-import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1Primitive;
-import org.bouncycastle.asn1.DERApplicationSpecific;
-import org.bouncycastle.asn1.ASN1ApplicationSpecific;
-import org.bouncycastle.asn1.DERSequence;
+import org.bouncycastle.asn1.ASN1TaggedObject;
+import org.bouncycastle.asn1.BERTags;
 
 public class CertificateExtensions extends ASN1Object {
 	
@@ -24,46 +23,35 @@ public class CertificateExtensions extends ASN1Object {
 		this.DiscretionaryDataTemplateList.add(ddt);
 	}
 	
-	private CertificateExtensions(ASN1ApplicationSpecific appSpe)
+	private CertificateExtensions(ASN1TaggedObject appSpe)
 	        throws IOException
 	    {
 	        setCertificateExtensions(appSpe);
 	    }
 
-	private void setCertificateExtensions(ASN1ApplicationSpecific appSpe) throws IOException {
-		byte[] content;
-        if (appSpe.getApplicationTag() == EACTags.CERTIFICATE_EXTENSIONS)
-        {
-            content = appSpe.getContents();
-        }
-        else
+	private void setCertificateExtensions(ASN1TaggedObject appSpe) throws IOException {
+        if (!appSpe.hasTag(BERTags.APPLICATION, EACTags.CERTIFICATE_EXTENSIONS))
         {
             throw new IOException("Bad tag : not CERTIFICATE_EXTENSIONS");
         }
-        ASN1InputStream aIS = new ASN1InputStream(content);
-        ASN1Primitive obj;
-        while ((obj = aIS.readObject()) != null) {
-            ASN1ApplicationSpecific aSpe;
+        for (ASN1Encodable obj : ApplicationObjects.children(appSpe)) {
+            ASN1TaggedObject aSpe;
 
-            if (obj instanceof ASN1ApplicationSpecific)
+            if (ApplicationObjects.isApplication(obj))
             {
-                aSpe = (ASN1ApplicationSpecific)obj;
+                aSpe = (ASN1TaggedObject)obj;
             }
             else
             {
-            	aIS.close();
-                throw new IOException("Not a valid iso7816 content : not a ASN1ApplicationSpecific Object :" + EACTags.encodeTag(appSpe) + obj.getClass());           
+                throw new IOException("Not a valid iso7816 content : not an APPLICATION tagged object :" + obj.getClass());
             }
-            if (aSpe.getApplicationTag()==EACTags.DISCRETIONARY_DATA_TEMPLATE) {
+            if (aSpe.hasTag(BERTags.APPLICATION, EACTags.DISCRETIONARY_DATA_TEMPLATE)) {
 	            addDiscretionaryDataTemplate(DiscretionaryDataTemplate.getInstance(aSpe));
             }
             else {
-            	aIS.close();
-                throw new IOException("Not a valid Discretionary Data Template, instead found tag: " + aSpe.getApplicationTag());
+                throw new IOException("Not a valid Discretionary Data Template, instead found tag: " + aSpe.getTagNo());
             }
         }
-        aIS.close();
-		
 	}
 
 	public void addDiscretionaryDataTemplate(DiscretionaryDataTemplate ddt) throws IOException {
@@ -82,11 +70,7 @@ public class CertificateExtensions extends ASN1Object {
 			v.add(item);
 		}
 		
-		try {
-			return new DERApplicationSpecific(false, EACTags.CERTIFICATE_EXTENSIONS, new DERSequence(v));
-		} catch (IOException e) {
-			throw new IllegalStateException("unable to convert Certificate Extensions");
-		}
+		return ApplicationObjects.create(EACTags.CERTIFICATE_EXTENSIONS, v);
 	}
 	
 	public static CertificateExtensions getInstance(Object appSpe)
@@ -98,7 +82,7 @@ public class CertificateExtensions extends ASN1Object {
 	        }
 	        else if (appSpe != null)
 	        {
-	            return new CertificateExtensions(ASN1ApplicationSpecific.getInstance(appSpe));
+	            return new CertificateExtensions(ApplicationObjects.getInstance(appSpe));
 	        }
 
 	        return null;

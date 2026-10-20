@@ -11,10 +11,8 @@ import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1ParsingException;
 import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.ASN1Sequence;
+import org.bouncycastle.asn1.ASN1TaggedObject;
 import org.bouncycastle.asn1.BERTags;
-import org.bouncycastle.asn1.DERApplicationSpecific;
-import org.bouncycastle.asn1.ASN1ApplicationSpecific;
-import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.eac.CertificationAuthorityReference;
 import org.bouncycastle.asn1.eac.PublicKeyDataObject;
 
@@ -28,22 +26,22 @@ public class CVCertificateRequest extends ASN1Object
     private byte[] innerSignature = null;
     private byte[] outerSignature = null;
 
-	private CVCertificateRequest(ASN1ApplicationSpecific request) throws IOException {
+	private CVCertificateRequest(ASN1TaggedObject request) throws IOException {
 
-		if (request.getApplicationTag() == 7) {
-			ASN1Sequence seq = ASN1Sequence.getInstance(request.getObject(BERTags.SEQUENCE));
+		if (request.hasTag(BERTags.APPLICATION, 7)) {
+			ASN1Sequence seq = ApplicationObjects.children(request);
 
 			try {
 				outerCAR = References.authorityReference("!!! MISSING CAR DATA OBJECT !!!".getBytes());
 				for (int i = 0; i < seq.size(); i++) {
-					int tag = ASN1ApplicationSpecific.getInstance(seq.getObjectAt(i)).getApplicationTag();
+					ASN1TaggedObject element = ApplicationObjects.getInstance(seq.getObjectAt(i));
+					int tag = element.getTagNo();
 					if (tag == 0x21)
-						initCertBody(ASN1ApplicationSpecific.getInstance(seq.getObjectAt(i)));
+						initCertBody(element);
 					else if (tag == 0x2)
-						outerCAR = References.authorityReference(
-								ASN1ApplicationSpecific.getInstance(seq.getObjectAt(i)).getContents());
+						outerCAR = References.authorityReference(ApplicationObjects.octets(element));
 					else if (tag == 0x37)
-						outerSignature = ASN1ApplicationSpecific.getInstance(seq.getObjectAt(i)).getContents();
+						outerSignature = ApplicationObjects.octets(element);
 
 				}
 			} catch (IllegalArgumentException e) {
@@ -53,31 +51,31 @@ public class CVCertificateRequest extends ASN1Object
 		} else initCertBody(request);
 	}
 
-    private void initCertBody(ASN1ApplicationSpecific request)
+    private void initCertBody(ASN1TaggedObject request)
         throws IOException
     {
-        if (request.getApplicationTag() == EACTags.CARDHOLDER_CERTIFICATE)
+        if (request.hasTag(BERTags.APPLICATION, EACTags.CARDHOLDER_CERTIFICATE))
         {
-            ASN1Sequence seq = ASN1Sequence.getInstance(request.getObject(BERTags.SEQUENCE));
+            ASN1Sequence seq = ApplicationObjects.children(request);
             for (Enumeration<?> en = seq.getObjects(); en.hasMoreElements();)
             {
-                ASN1ApplicationSpecific obj = ASN1ApplicationSpecific.getInstance(en.nextElement());
-                switch (obj.getApplicationTag())
+                ASN1TaggedObject obj = ApplicationObjects.getInstance(en.nextElement());
+                switch (obj.getTagNo())
                 {
                 case EACTags.CERTIFICATE_CONTENT_TEMPLATE:
                     certificateBody = CertificateBody.getInstance(obj);
                     break;
                 case EACTags.STATIC_INTERNAL_AUTHENTIFICATION_ONE_STEP:
-                    innerSignature = obj.getContents();
+                    innerSignature = ApplicationObjects.octets(obj);
                     break;
                 default:
-                    throw new IOException("Invalid tag, not an CV Certificate Request element:" + obj.getApplicationTag());
+                    throw new IOException("Invalid tag, not an CV Certificate Request element:" + obj.getTagNo());
                 }
             }
         }
         else
         {
-            throw new IOException("not a CARDHOLDER_CERTIFICATE in request:" + request.getApplicationTag());
+            throw new IOException("not a CARDHOLDER_CERTIFICATE in request:" + request.getTagNo());
         }
     }
 
@@ -91,7 +89,7 @@ public class CVCertificateRequest extends ASN1Object
         {
             try
             {
-                return new CVCertificateRequest(ASN1ApplicationSpecific.getInstance(obj));
+                return new CVCertificateRequest(ApplicationObjects.getInstance(obj));
             }
             catch (IOException e)
             {
@@ -176,15 +174,8 @@ public class CVCertificateRequest extends ASN1Object
 
         v.add(certificateBody);
 
-        try
-        {
-            v.add(new DERApplicationSpecific(false, EACTags.STATIC_INTERNAL_AUTHENTIFICATION_ONE_STEP, new DEROctetString(innerSignature)));
-        }
-        catch (IOException e)
-        {
-            throw new IllegalStateException("unable to convert signature!");
-        }
+        v.add(ApplicationObjects.create(EACTags.STATIC_INTERNAL_AUTHENTIFICATION_ONE_STEP, innerSignature));
 
-        return new DERApplicationSpecific(EACTags.CARDHOLDER_CERTIFICATE, v);
+        return ApplicationObjects.create(EACTags.CARDHOLDER_CERTIFICATE, v);
     }
 }

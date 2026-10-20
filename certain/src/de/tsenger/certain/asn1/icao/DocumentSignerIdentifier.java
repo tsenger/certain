@@ -1,12 +1,11 @@
 package de.tsenger.certain.asn1.icao;
 
-import java.io.IOException;
-
 import org.bouncycastle.asn1.ASN1Choice;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.ASN1Primitive;
+import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.ASN1TaggedObject;
 import org.bouncycastle.asn1.DERTaggedObject;
 import org.bouncycastle.asn1.cms.IssuerAndSerialNumber;
@@ -62,16 +61,9 @@ public class DocumentSignerIdentifier extends ASN1Object implements ASN1Choice {
         	ASN1TaggedObject    tagObj = (ASN1TaggedObject)obj;
         	int tag = tagObj.getTagNo();
         	
-        	ASN1Encodable asn1enc = null;
-			try {
-				asn1enc = tagObj.getObjectParser(TYPE_issuerAndSerialNumber, false);
-			} catch (IOException e) {
-				return null;
-			}
-			
     		switch (tag) {
             	case TYPE_issuerAndSerialNumber:    
-            		return new DocumentSignerIdentifier(IssuerAndSerialNumber.getInstance(asn1enc));
+            		return new DocumentSignerIdentifier(IssuerAndSerialNumber.getInstance(ASN1Sequence.getInstance(tagObj, false)));
             	case TYPE_subjectKeyIdentifier:
             		return new DocumentSignerIdentifier(SubjectKeyIdentifier.getInstance(tagObj, false));
             	case TYPE_certificateDigest:

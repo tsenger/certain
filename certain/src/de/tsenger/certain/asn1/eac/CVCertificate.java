@@ -4,15 +4,15 @@ package de.tsenger.certain.asn1.eac;
 
 import java.io.IOException;
 
+import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1ParsingException;
 import org.bouncycastle.asn1.ASN1Primitive;
-import org.bouncycastle.asn1.DERApplicationSpecific;
-import org.bouncycastle.asn1.ASN1ApplicationSpecific;
-import org.bouncycastle.asn1.DEROctetString;
+import org.bouncycastle.asn1.ASN1TaggedObject;
+import org.bouncycastle.asn1.BERTags;
 import org.bouncycastle.asn1.eac.CertificateHolderReference;
 import org.bouncycastle.asn1.eac.CertificationAuthorityReference;
 import org.bouncycastle.asn1.eac.PackedDate;
@@ -43,48 +43,44 @@ public class CVCertificate  extends ASN1Object
     /**
      * Sets the values of the certificate (body and signature).
      *
-     * @param appSpe is a ASN1ApplicationSpecific object containing body and signature.
+     * @param appSpe is an APPLICATION tagged object containing body and signature.
      * @throws IOException if tags or value are incorrect.
      */
-    private void setPrivateData(ASN1ApplicationSpecific appSpe)
+    private void setPrivateData(ASN1TaggedObject appSpe)
         throws IOException
     {
         valid = 0;
-        if (appSpe.getApplicationTag() == EACTags.CARDHOLDER_CERTIFICATE)
+        if (appSpe.hasTag(BERTags.APPLICATION, EACTags.CARDHOLDER_CERTIFICATE))
         {
-            ASN1InputStream content = new ASN1InputStream(appSpe.getContents());
-            ASN1Primitive tmpObj;
-            while ((tmpObj = content.readObject()) != null)
+            for (ASN1Encodable tmpObj : ApplicationObjects.children(appSpe))
             {
-                ASN1ApplicationSpecific aSpe;
-                if (tmpObj instanceof ASN1ApplicationSpecific)
+                ASN1TaggedObject aSpe;
+                if (ApplicationObjects.isApplication(tmpObj))
                 {
-                    aSpe = (ASN1ApplicationSpecific)tmpObj;
-                    switch (aSpe.getApplicationTag())
+                    aSpe = (ASN1TaggedObject)tmpObj;
+                    switch (aSpe.getTagNo())
                     {
                     case EACTags.CERTIFICATE_CONTENT_TEMPLATE:
                         certificateBody = CertificateBody.getInstance(aSpe);
                         valid |= bodyValid;
                         break;
                     case EACTags.STATIC_INTERNAL_AUTHENTIFICATION_ONE_STEP:
-                        signature = aSpe.getContents();
+                        signature = ApplicationObjects.octets(aSpe);
                         valid |= signValid;
                         break;
                     default:
-                        throw new IOException("Invalid tag, not an Iso7816CertificateStructure :" + aSpe.getApplicationTag());
+                        throw new IOException("Invalid tag, not an Iso7816CertificateStructure :" + aSpe.getTagNo());
                     }
                 }
                 else
                 {
-                	content.close();
                     throw new IOException("Invalid Object, not an Iso7816CertificateStructure");
                 }
             }
-            content.close();
         }
         else
         {
-            throw new IOException("not a CARDHOLDER_CERTIFICATE :" + appSpe.getApplicationTag());
+            throw new IOException("not a CARDHOLDER_CERTIFICATE :" + appSpe.getTagNo());
         }
     }
 
@@ -107,9 +103,9 @@ public class CVCertificate  extends ASN1Object
         ASN1Primitive obj;
         while ((obj = aIS.readObject()) != null)
         {
-            if (obj instanceof ASN1ApplicationSpecific)
+            if (ApplicationObjects.isApplication(obj))
             {
-                setPrivateData((ASN1ApplicationSpecific)obj);
+                setPrivateData((ASN1TaggedObject)obj);
             }
             else
             {
@@ -119,13 +115,13 @@ public class CVCertificate  extends ASN1Object
     }
 
     /**
-     * Create an iso7816Certificate structure from a ASN1ApplicationSpecific.
+     * Create an iso7816Certificate structure from an APPLICATION tagged object.
      *
-     * @param appSpe the ASN1ApplicationSpecific object.
-     * @return the Iso7816CertificateStructure represented by the ASN1ApplicationSpecific object.
+     * @param appSpe the APPLICATION tagged object.
+     * @return the Iso7816CertificateStructure represented by the APPLICATION tagged object.
      * @throws IOException if there is a problem parsing the data.
      */
-    private CVCertificate(ASN1ApplicationSpecific appSpe)
+    private CVCertificate(ASN1TaggedObject appSpe)
         throws IOException
     {
         setPrivateData(appSpe);
@@ -166,7 +162,7 @@ public class CVCertificate  extends ASN1Object
         {
             try
             {
-                return new CVCertificate(ASN1ApplicationSpecific.getInstance(obj));
+                return new CVCertificate(ApplicationObjects.getInstance(obj));
             }
             catch (IOException e)
             {
@@ -212,16 +208,9 @@ public class CVCertificate  extends ASN1Object
         }
         v.add(certificateBody);
 
-        try
-        {
-            v.add(new DERApplicationSpecific(false, EACTags.STATIC_INTERNAL_AUTHENTIFICATION_ONE_STEP, new DEROctetString(signature)));
-        }
-        catch (IOException e)
-        {
-            throw new IllegalStateException("unable to convert signature!");
-        }
+        v.add(ApplicationObjects.create(EACTags.STATIC_INTERNAL_AUTHENTIFICATION_ONE_STEP, signature));
 
-        return new DERApplicationSpecific(EACTags.CARDHOLDER_CERTIFICATE, v);
+        return ApplicationObjects.create(EACTags.CARDHOLDER_CERTIFICATE, v);
     }
 
     /**

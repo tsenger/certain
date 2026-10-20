@@ -66,7 +66,7 @@ public class CertField extends ASN1Object implements ASN1Choice {
         }
         
         if (obj instanceof ASN1TaggedObject) {
-        	ASN1Object embeddedObj = ASN1TaggedObject.getInstance(obj).getObject();
+        	ASN1Object embeddedObj = ASN1TaggedObject.getInstance(obj).getBaseObject();
         	
         	if (embeddedObj instanceof ASN1Integer)
             {

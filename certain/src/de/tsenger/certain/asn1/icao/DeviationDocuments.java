@@ -7,7 +7,7 @@ import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.ASN1Set;
 import org.bouncycastle.asn1.ASN1TaggedObject;
-import org.bouncycastle.asn1.DERPrintableString;
+import org.bouncycastle.asn1.ASN1PrintableString;
 import org.bouncycastle.asn1.DERSequence;
 
 
@@ -27,7 +27,7 @@ import org.bouncycastle.asn1.DERSequence;
 
 public class DeviationDocuments extends ASN1Object 
 {
-	private DERPrintableString documentType;
+	private ASN1PrintableString documentType;
 	private DocumentSignerIdentifier dscIdentifier ;
 	private IssuancePeriod issuingDate;
 	private ASN1Set documentNumbers;
@@ -42,7 +42,7 @@ public class DeviationDocuments extends ASN1Object
 
 			if (seq.getObjectAt(index) instanceof ASN1TaggedObject) {
 				ASN1TaggedObject tagObj = ASN1TaggedObject.getInstance(seq.getObjectAt(index));
-				if (tagObj.getTagNo() == 0)	documentType = DERPrintableString.getInstance(tagObj, false);
+				if (tagObj.getTagNo() == 0)	documentType = ASN1PrintableString.getInstance(tagObj, false);
 				else if (tagObj.getTagNo() == 4) issuingDate = IssuancePeriod.getInstance(ASN1Sequence.getInstance(tagObj, false));
 				else if (tagObj.getTagNo() == 5) documentNumbers = ASN1Set.getInstance(tagObj, false);
 			}

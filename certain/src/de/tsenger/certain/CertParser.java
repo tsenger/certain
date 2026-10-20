@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.ASN1OctetString;
+import org.bouncycastle.asn1.BERTags;
 import org.bouncycastle.util.encoders.Hex;
 
 import de.tsenger.certain.asn1.eac.CertificateBody;
@@ -103,7 +105,7 @@ public class CertParser {
 			certRole = chat.getRoleDescription();
 		}
 		
-		profileId = body.getCertificateProfileIdentifier().getContents();
+		profileId = ((ASN1OctetString) body.getCertificateProfileIdentifier().getBaseUniversal(false, BERTags.OCTET_STRING)).getOctets();
 
 		if (showDetails) profileIdStr = HexString.bufferToHex(profileId);
 		if (profileId.length>1) profileIdStr += " -> Length of Profile Identifier is bigger den 1!";

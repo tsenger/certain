@@ -4,15 +4,12 @@ package de.tsenger.certain.asn1.eac;
 
 import java.io.IOException;
 
-import org.bouncycastle.asn1.ASN1ApplicationSpecific;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1EncodableVector;
-import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1Primitive;
+import org.bouncycastle.asn1.ASN1TaggedObject;
 import org.bouncycastle.asn1.BERTags;
-import org.bouncycastle.asn1.DERApplicationSpecific;
-import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.eac.CertificateHolderReference;
 import org.bouncycastle.asn1.eac.CertificationAuthorityReference;
 import org.bouncycastle.asn1.eac.PackedDate;
@@ -25,24 +22,24 @@ import org.bouncycastle.asn1.eac.PublicKeyDataObject;
  * <pre>
  *  CertificateBody ::= SEQUENCE {
  *  	// version of the certificate format. Must be 0 (version 1)
- *      CertificateProfileIdentifer 		ASN1ApplicationSpecific,
+ *      CertificateProfileIdentifer 		APPLICATION tagged,
  *      //uniquely identifies the issuinng CA's signature key pair
  *      // contains the iso3166-1 alpha2 encoded country code, the
  *      // name of issuer and the sequence number of the key pair.
- *      CertificationAuthorityReference		ASN1ApplicationSpecific,
+ *      CertificationAuthorityReference		APPLICATION tagged,
  *      // stores the encoded public key
  *      PublicKey							Iso7816PublicKey,
  *      //associates the public key contained in the certificate with a unique name
  *      // contains the iso3166-1 alpha2 encoded country code, the
  *      // name of the holder and the sequence number of the key pair.
- *      certificateHolderReference			ASN1ApplicationSpecific,
+ *      certificateHolderReference			APPLICATION tagged,
  *      // Encodes the role of the holder (i.e. CVCA, DV, IS) and assigns read/write
  *      // access rights to data groups storing sensitive data
  *      certificateHolderAuthorization		Iso7816CertificateHolderAuthorization,
  *      // the date of the certificate generation
- *      CertificateEffectiveDate			ASN1ApplicationSpecific,
+ *      CertificateEffectiveDate			APPLICATION tagged,
  *      // the date after wich the certificate expires
- *      certificateExpirationDate			ASN1ApplicationSpecific
+ *      certificateExpirationDate			APPLICATION tagged
  *      // certificates may contain extension
  *      certificateExtensions				CertificateExtensions
  *  }
@@ -50,14 +47,13 @@ import org.bouncycastle.asn1.eac.PublicKeyDataObject;
  */
 public class CertificateBody  extends ASN1Object
 {
-    ASN1InputStream seq;
-    private ASN1ApplicationSpecific certificateProfileIdentifier;// version of the certificate format. Must be 0 (version 1)
-    private ASN1ApplicationSpecific certificationAuthorityReference;//uniquely identifies the issuing CA's signature key pair
+    private ASN1TaggedObject certificateProfileIdentifier;// version of the certificate format. Must be 0 (version 1)
+    private ASN1TaggedObject certificationAuthorityReference;//uniquely identifies the issuing CA's signature key pair
     private PublicKeyDataObject publicKey;// stores the encoded public key
-    private ASN1ApplicationSpecific certificateHolderReference;//associates the public key contained in the certificate with a unique name
+    private ASN1TaggedObject certificateHolderReference;//associates the public key contained in the certificate with a unique name
     private CertificateHolderAuthorization certificateHolderAuthorization;// Encodes the role of the holder (i.e. CVCA, DV, IS) and assigns read/write access rights to data groups storing sensitive data
-    private ASN1ApplicationSpecific certificateEffectiveDate;// the date of the certificate generation
-    private ASN1ApplicationSpecific certificateExpirationDate;// the date after which the certificate expires
+    private ASN1TaggedObject certificateEffectiveDate;// the date of the certificate generation
+    private ASN1TaggedObject certificateExpirationDate;// the date after which the certificate expires
     private CertificateExtensions certificateExtensions;
     private int certificateType = 0;// bit field of initialized data. This will tell us if the data are valid.
     private static final int CPI = 0x01;//certificate Profile Identifier
@@ -77,31 +73,23 @@ public class CertificateBody  extends ASN1Object
     public static final int requestTypeWithCARAndWithExt = 0x8F;//Profile type Certificate with CAR and with Extensions
     
 
-    private void setIso7816CertificateBody(ASN1ApplicationSpecific appSpe) throws IOException {
-        byte[] content;
-        if (appSpe.getApplicationTag() == EACTags.CERTIFICATE_CONTENT_TEMPLATE)
-        {
-            content = appSpe.getContents();
-        }
-        else
+    private void setIso7816CertificateBody(ASN1TaggedObject appSpe) throws IOException {
+        if (!appSpe.hasTag(BERTags.APPLICATION, EACTags.CERTIFICATE_CONTENT_TEMPLATE))
         {
             throw new IOException("Bad tag : not an iso7816 CERTIFICATE_CONTENT_TEMPLATE");
         }
-        ASN1InputStream aIS = new ASN1InputStream(content);
-        ASN1Primitive obj;
-        while ((obj = aIS.readObject()) != null) {
-            ASN1ApplicationSpecific aSpe;
+        for (ASN1Encodable obj : ApplicationObjects.children(appSpe)) {
+            ASN1TaggedObject aSpe;
 
-            if (obj instanceof ASN1ApplicationSpecific)
+            if (ApplicationObjects.isApplication(obj))
             {
-                aSpe = (ASN1ApplicationSpecific)obj;
+                aSpe = (ASN1TaggedObject)obj;
             }
             else
             {
-            	aIS.close();
-                throw new IOException("Not a valid iso7816 content : not a ASN1ApplicationSpecific Object :" + EACTags.encodeTag(appSpe) + obj.getClass());           
+                throw new IOException("Not a valid iso7816 content : not an APPLICATION tagged object :" + obj.getClass());
             }
-            switch (aSpe.getApplicationTag())
+            switch (aSpe.getTagNo())
             {
             case EACTags.CERTIFICATE_PROFILE_IDENTIFIER:
                 setCertificateProfileIdentifier(aSpe);
@@ -110,7 +98,7 @@ public class CertificateBody  extends ASN1Object
                 setCertificationAuthorityReference(aSpe);
                 break;
             case EACTags.PUBLIC_KEY:
-                setPublicKey(PublicKeyDataObject.getInstance(aSpe.getObject(BERTags.SEQUENCE)));
+                setPublicKey(PublicKeyDataObject.getInstance(ApplicationObjects.children(aSpe)));
                 break;
             case EACTags.CERTIFICATE_HOLDER_REFERENCE:
                 setCertificateHolderReference(aSpe);
@@ -129,10 +117,9 @@ public class CertificateBody  extends ASN1Object
             	break;
             default:
                 certificateType = 0;
-                throw new IOException("Not a valid iso7816 ASN1ApplicationSpecific tag " + aSpe.getApplicationTag());
+                throw new IOException("Not a valid iso7816 APPLICATION tag " + aSpe.getTagNo());
             }
         }
-        aIS.close();
     }
 
 	/**
@@ -149,7 +136,7 @@ public class CertificateBody  extends ASN1Object
      * @param certificateExtensions
      * @throws IOException
      */
-    public CertificateBody(ASN1ApplicationSpecific certificateProfileIdentifier,
+    public CertificateBody(ASN1TaggedObject certificateProfileIdentifier,
     		CertificationAuthorityReference certificationAuthorityReference,
     		PublicKeyDataObject publicKey,
     		CertificateHolderReference certificateHolderReference,
@@ -159,46 +146,40 @@ public class CertificateBody  extends ASN1Object
     		CertificateExtensions certificateExtensions) {
     	
         setCertificateProfileIdentifier(certificateProfileIdentifier);
-        setCertificationAuthorityReference(new DERApplicationSpecific(EACTags.CERTIFICATION_AUTHORITY_REFERENCE, certificationAuthorityReference.getEncoded()));
+        setCertificationAuthorityReference(ApplicationObjects.create(EACTags.CERTIFICATION_AUTHORITY_REFERENCE, certificationAuthorityReference.getEncoded()));
         setPublicKey(publicKey);
-        setCertificateHolderReference(new DERApplicationSpecific(EACTags.CERTIFICATE_HOLDER_REFERENCE, certificateHolderReference.getEncoded()));
+        setCertificateHolderReference(ApplicationObjects.create(EACTags.CERTIFICATE_HOLDER_REFERENCE, certificateHolderReference.getEncoded()));
         setCertificateHolderAuthorization(certificateHolderAuthorization);
-        try {
-            setCertificateEffectiveDate(new DERApplicationSpecific(false, EACTags.CERTIFICATE_EFFECTIVE_DATE, new DEROctetString(certificateEffectiveDate.getEncoding())));
-            setCertificateExpirationDate(new DERApplicationSpecific(false, EACTags.CERTIFICATE_EXPIRATION_DATE, new DEROctetString(certificateExpirationDate.getEncoding())));
-        }
-        catch (IOException e) {
-            throw new IllegalArgumentException("unable to encode dates: " + e.getMessage());
-        }
+        setCertificateEffectiveDate(ApplicationObjects.create(EACTags.CERTIFICATE_EFFECTIVE_DATE, certificateEffectiveDate.getEncoding()));
+        setCertificateExpirationDate(ApplicationObjects.create(EACTags.CERTIFICATE_EXPIRATION_DATE, certificateExpirationDate.getEncoding()));
         this.certificateExtensions = certificateExtensions;
     }
 
     /**
      * builds an Iso7816CertificateBody with an ASN1InputStream.
      *
-     * @param asn1ApplicationSpecific ASN1ApplicationSpecific containing the whole body.
+     * @param tagged the APPLICATION tagged object containing the whole body.
      * @throws IOException if the body is not valid.
      */
-    private CertificateBody(ASN1ApplicationSpecific asn1ApplicationSpecific)
+    private CertificateBody(ASN1TaggedObject tagged)
         throws IOException
     {
-        setIso7816CertificateBody(asn1ApplicationSpecific);
+        setIso7816CertificateBody(tagged);
     }
 
     /**
      * Bouncy Castle encodes a public key as a plain sequence, the body adds the public key tag.
      */
     private ASN1Encodable encodedPublicKey()
-        throws IOException
     {
-        return new DERApplicationSpecific(false, EACTags.PUBLIC_KEY, publicKey);
+        return ApplicationObjects.create(EACTags.PUBLIC_KEY, publicKey);
     }
 
     /**
      * create a profile type Iso7816CertificateBody.
      *
      * @return return the "profile" type certificate body.
-     * @throws IOException if the ASN1ApplicationSpecific cannot be created.
+     * @throws IOException if the APPLICATION tagged object cannot be created.
      */
 	private ASN1Primitive profileToASN1Object()
         throws IOException
@@ -213,22 +194,22 @@ public class CertificateBody  extends ASN1Object
         v.add(certificateEffectiveDate);
         v.add(certificateExpirationDate);
         if (certificateExtensions!=null) v.add(certificateExtensions);
-        return new DERApplicationSpecific(EACTags.CERTIFICATE_CONTENT_TEMPLATE, v);
+        return ApplicationObjects.create(EACTags.CERTIFICATE_CONTENT_TEMPLATE, v);
     }
 
-    private void setCertificateProfileIdentifier(ASN1ApplicationSpecific certificateProfileIdentifier)
+    private void setCertificateProfileIdentifier(ASN1TaggedObject certificateProfileIdentifier)
 	throws IllegalArgumentException {
-		if (certificateProfileIdentifier.getApplicationTag() == EACTags.CERTIFICATE_PROFILE_IDENTIFIER) {
+		if (certificateProfileIdentifier.hasTag(BERTags.APPLICATION, EACTags.CERTIFICATE_PROFILE_IDENTIFIER)) {
 			this.certificateProfileIdentifier = certificateProfileIdentifier;
 			certificateType |= CPI;
 		}
 		else
-			throw new IllegalArgumentException("Not an Iso7816Tags.INTERCHANGE_PROFILE tag :"+ EACTags.encodeTag(certificateProfileIdentifier));
+			throw new IllegalArgumentException("Not an Iso7816Tags.INTERCHANGE_PROFILE tag :"+ certificateProfileIdentifier.getTagNo());
 	}
 
-    private void setCertificateHolderReference(ASN1ApplicationSpecific certificateHolderReference)
+    private void setCertificateHolderReference(ASN1TaggedObject certificateHolderReference)
 	throws IllegalArgumentException {
-		if (certificateHolderReference.getApplicationTag() == EACTags.CERTIFICATE_HOLDER_REFERENCE) {
+		if (certificateHolderReference.hasTag(BERTags.APPLICATION, EACTags.CERTIFICATE_HOLDER_REFERENCE)) {
 			this.certificateHolderReference = certificateHolderReference;
 			certificateType |= CHR;
 		}
@@ -238,11 +219,11 @@ public class CertificateBody  extends ASN1Object
 
     	/**
 	 * set the CertificationAuthorityReference.
-	 * @param certificationAuthorityReference the ASN1ApplicationSpecific containing the CertificationAuthorityReference.
-	 * @throws IllegalArgumentException if the ASN1ApplicationSpecific is not valid.
+	 * @param certificationAuthorityReference the APPLICATION tagged object containing the CertificationAuthorityReference.
+	 * @throws IllegalArgumentException if the tag is not valid.
 	 */
-	private void setCertificationAuthorityReference(ASN1ApplicationSpecific certificationAuthorityReference) throws IllegalArgumentException {
-		if (certificationAuthorityReference.getApplicationTag() == EACTags.CERTIFICATION_AUTHORITY_REFERENCE) {
+	private void setCertificationAuthorityReference(ASN1TaggedObject certificationAuthorityReference) throws IllegalArgumentException {
+		if (certificationAuthorityReference.hasTag(BERTags.APPLICATION, EACTags.CERTIFICATION_AUTHORITY_REFERENCE)) {
 			this.certificationAuthorityReference = certificationAuthorityReference;
 			certificateType |= CAR;
 		}
@@ -265,7 +246,7 @@ public class CertificateBody  extends ASN1Object
      * create a request type Iso7816CertificateBody.
      *
      * @return return the "request" type certificate body.
-     * @throws IOException if the ASN1ApplicationSpecific cannot be created.
+     * @throws IOException if the APPLICATION tagged object cannot be created.
      */
     private ASN1Primitive requestToASN1Object()
         throws IOException
@@ -277,7 +258,7 @@ public class CertificateBody  extends ASN1Object
         v.add(encodedPublicKey());
         v.add(certificateHolderReference);
         if (certificateExtensions!=null) v.add(certificateExtensions);
-        return new DERApplicationSpecific(EACTags.CERTIFICATE_CONTENT_TEMPLATE, v);
+        return ApplicationObjects.create(EACTags.CERTIFICATE_CONTENT_TEMPLATE, v);
     }
 
     /**
@@ -333,7 +314,7 @@ public class CertificateBody  extends ASN1Object
         }
         else if (obj != null)
         {
-            return new CertificateBody(ASN1ApplicationSpecific.getInstance(obj));
+            return new CertificateBody(ApplicationObjects.getInstance(obj));
         }
 
         return null;
@@ -355,13 +336,13 @@ public class CertificateBody  extends ASN1Object
      * @param cext CertificateExtensions object
      * @throws IOException
      */
-    private void setCertificateExtensions(ASN1ApplicationSpecific cext) throws IOException {
-    	if (cext.getApplicationTag() == EACTags.CERTIFICATE_EXTENSIONS) {
+    private void setCertificateExtensions(ASN1TaggedObject cext) throws IOException {
+    	if (cext.hasTag(BERTags.APPLICATION, EACTags.CERTIFICATE_EXTENSIONS)) {
     		this.certificateExtensions = CertificateExtensions.getInstance(cext);
     		certificateType |= CeEx;
     	}
     	else {
-    		throw new IllegalArgumentException("Not an CERTIFICATE_EXTENSIONS tag :" + EACTags.encodeTag(cext));
+    		throw new IllegalArgumentException("Not an CERTIFICATE_EXTENSIONS tag :" + cext.getTagNo());
     	}
 		
 	}
@@ -374,7 +355,7 @@ public class CertificateBody  extends ASN1Object
         if ((this.certificateType & CertificateBody.CEfD) ==
             CertificateBody.CEfD)
         {
-            return References.packedDate(certificateEffectiveDate.getContents());
+            return References.packedDate(ApplicationObjects.octets(certificateEffectiveDate));
         }
         return null;
     }
@@ -382,20 +363,20 @@ public class CertificateBody  extends ASN1Object
     /**
      * set the date of the certificate generation
      *
-     * @param ced ASN1ApplicationSpecific containing the date of the certificate generation
+     * @param ced APPLICATION tagged object containing the date of the certificate generation
      * @throws IllegalArgumentException if the tag is not Iso7816Tags.APPLICATION_EFFECTIVE_DATE
      */
-    private void setCertificateEffectiveDate(ASN1ApplicationSpecific ced)
+    private void setCertificateEffectiveDate(ASN1TaggedObject ced)
         throws IllegalArgumentException
     {
-        if (ced.getApplicationTag() == EACTags.CERTIFICATE_EFFECTIVE_DATE)
+        if (ced.hasTag(BERTags.APPLICATION, EACTags.CERTIFICATE_EFFECTIVE_DATE))
         {
             this.certificateEffectiveDate = ced;
             certificateType |= CEfD;
         }
         else
         {
-            throw new IllegalArgumentException("Not an Iso7816Tags.APPLICATION_EFFECTIVE_DATE tag :" + EACTags.encodeTag(ced));
+            throw new IllegalArgumentException("Not an Iso7816Tags.APPLICATION_EFFECTIVE_DATE tag :" + ced.getTagNo());
         }
     }
 
@@ -406,7 +387,7 @@ public class CertificateBody  extends ASN1Object
     {
         if ((this.certificateType & CertificateBody.CExD) ==  CertificateBody.CExD)
         {
-            return References.packedDate(certificateExpirationDate.getContents());
+            return References.packedDate(ApplicationObjects.octets(certificateExpirationDate));
         }
         return null;
     }
@@ -414,13 +395,13 @@ public class CertificateBody  extends ASN1Object
     /**
      * set the date after wich the certificate expires
      *
-     * @param ced ASN1ApplicationSpecific containing the date after wich the certificate expires
+     * @param ced APPLICATION tagged object containing the date after wich the certificate expires
      * @throws IllegalArgumentException if the tag is not Iso7816Tags.APPLICATION_EXPIRATION_DATE
      */
-    private void setCertificateExpirationDate(ASN1ApplicationSpecific ced)
+    private void setCertificateExpirationDate(ASN1TaggedObject ced)
         throws IllegalArgumentException
     {
-        if (ced.getApplicationTag() == EACTags.CERTIFICATE_EXPIRATION_DATE)
+        if (ced.hasTag(BERTags.APPLICATION, EACTags.CERTIFICATE_EXPIRATION_DATE))
         {
             this.certificateExpirationDate = ced;
             certificateType |= CExD;
@@ -463,7 +444,7 @@ public class CertificateBody  extends ASN1Object
      */
     public CertificateHolderReference getCertificateHolderReference()
     {
-        return References.holderReference(certificateHolderReference.getContents());
+        return References.holderReference(ApplicationObjects.octets(certificateHolderReference));
     }
     
     public String getChrString() {
@@ -478,7 +459,7 @@ public class CertificateBody  extends ASN1Object
      *
      * @return the CertificateProfileIdentifier
      */
-    public ASN1ApplicationSpecific getCertificateProfileIdentifier()
+    public ASN1TaggedObject getCertificateProfileIdentifier()
     {
         return certificateProfileIdentifier;
     }
@@ -493,7 +474,7 @@ public class CertificateBody  extends ASN1Object
     {
         if ((this.certificateType & CertificateBody.CAR) == CertificateBody.CAR)
         {
-            return References.authorityReference(certificationAuthorityReference.getContents());
+            return References.authorityReference(ApplicationObjects.octets(certificationAuthorityReference));
         }
         return null;
     }

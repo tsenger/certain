@@ -6,7 +6,7 @@ import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.ASN1TaggedObject;
-import org.bouncycastle.asn1.DERPrintableString;
+import org.bouncycastle.asn1.ASN1PrintableString;
 import org.bouncycastle.asn1.DERSequence;
 
 
@@ -26,7 +26,7 @@ import org.bouncycastle.asn1.DERSequence;
 
 public class DeviationDescription extends ASN1Object 
 {
-	private DERPrintableString description;
+	private ASN1PrintableString description;
 	private ASN1ObjectIdentifier deviationType ;
 	private ASN1TaggedObject parameters;
 	private ASN1TaggedObject nationalUse;
@@ -40,8 +40,8 @@ public class DeviationDescription extends ASN1Object
         }
 		
 
-		if (seq.getObjectAt(index) instanceof DERPrintableString) {
-			description = DERPrintableString.getInstance(seq.getObjectAt(index++));
+		if (seq.getObjectAt(index) instanceof ASN1PrintableString) {
+			description = ASN1PrintableString.getInstance(seq.getObjectAt(index++));
 		}
 		
 		if ((index<seq.size()) && (seq.getObjectAt(index) instanceof ASN1ObjectIdentifier)) {
