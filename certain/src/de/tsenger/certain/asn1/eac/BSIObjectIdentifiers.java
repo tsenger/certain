@@ -412,6 +412,7 @@ public interface BSIObjectIdentifiers {
 	// eID
 	public static final ASN1ObjectIdentifier eID = applications.branch("2");
 	public static final ASN1ObjectIdentifier SecurityObject = eID.branch("1");
+	// Black List (TR-03129 V1.10, B), renamed to Block List in TR-03129-3 V1.40, B
 	public static final ASN1ObjectIdentifier BlackList = eID.branch("2");
 	
 	// eCard-API

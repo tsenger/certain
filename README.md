@@ -11,7 +11,8 @@ Usage: certain [options]
       certificates and requests
       Default: false
     --dlist, -dl
-      Deviation List or Defect List file, shows all deviations or defects
+      Deviation List, Defect List or Block List file, shows all deviations,
+      defects or blocked IDs
     --dvreq, -r
       DV certificate request file
     --fingerprint, -f

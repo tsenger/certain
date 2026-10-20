@@ -70,7 +70,7 @@ public class CertainMain {
 	@Parameter(names = {"--masterlist","-ml"}, description = "ICAO CSCA Master List or BSI Signer List file (BSI TR-03129-2, 9)")
 	private String masterListFileName;
 
-	@Parameter(names = {"--dlist","-dl"}, description = "Deviation List or Defect List file, shows all deviations or defects")
+	@Parameter(names = {"--dlist","-dl"}, description = "Deviation List, Defect List or Block List file, shows all deviations, defects or blocked IDs")
 	private String dListFileName;
 
 	@Parameter(names = {"--help", "-h"}, description = "Show this help and exit", help = true)

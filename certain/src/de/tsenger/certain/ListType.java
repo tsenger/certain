@@ -8,7 +8,7 @@ import de.tsenger.certain.asn1.icao.ICAOObjectIdentifiers;
 
 /**
  * The signed lists certain knows, identified by the eContentType of their SignedData object, with the key purpose
- * that the extended key usage of their signer certificate contains.
+ * that the extended key usage of their signer certificate contains (null if none is defined).
  */
 enum ListType {
 	/** ICAO Doc 9303 Part 12, 10 */
@@ -17,6 +17,8 @@ enum ListType {
 	MASTER_LIST(ICAOObjectIdentifiers.id_icao_cscaMasterList, "ICAO CSCA Master List", ICAOObjectIdentifiers.id_icao_cscaMasterListSigningKey),
 	/** BSI TR-03129-2, 8 */
 	DEFECT_LIST(BSIObjectIdentifiers.DefectList, "BSI Defect List", BSIObjectIdentifiers.electronicDefectListSigningKey),
+	/** BSI TR-03129-3, B (Block List) and TR-03129 V1.10, B (Black List); no key purpose is defined for its signer */
+	BLOCK_LIST(BSIObjectIdentifiers.BlackList, "BSI Block List", null),
 	// Signer lists, BSI TR-03129-2, 9
 	DOCUMENT_SIGNER_LIST(BSIObjectIdentifiers.DocumentSignerList, "BSI Document Signer List", BSIObjectIdentifiers.documentSignerListSigningKey),
 	EU_HEALTH_SEAL_SIGNER_LIST(BSIObjectIdentifiers.euHealthSealSignerList, "BSI EU Health Seal Signer List", BSIObjectIdentifiers.euHealthSealSignerListSigningKey),
@@ -33,7 +35,7 @@ enum ListType {
 	ListType(ASN1ObjectIdentifier contentType, String name, ASN1ObjectIdentifier signingKey) {
 		this.contentType = contentType;
 		this.name = name;
-		this.signingKey = KeyPurposeId.getInstance(signingKey);
+		this.signingKey = signingKey != null ? KeyPurposeId.getInstance(signingKey) : null;
 	}
 
 	/** @return the list type with this eContentType or null if it is unknown */

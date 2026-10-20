@@ -240,17 +240,17 @@ public class SignedDataParser {
 		boolean masterList = listType == ListType.MASTER_LIST;
 		boolean icao = masterList || listType == ListType.DEVIATION_LIST;
 		String table = icao ? "ICAO Doc 9303 Part 12, " + (masterList ? "Table 18" : "Table 19") : "BSI TR-03129-3, Table 3";
-		String signer = masterList ? "Master List Signer" : icao ? "Deviation List Signer" : listType == ListType.DEFECT_LIST ? "DFL Signer" : "Signer List Signer";
+		String signer = masterList ? "Master List Signer" : icao ? "Deviation List Signer" : listType == ListType.DEFECT_LIST ? "DFL Signer"
+				: listType == ListType.BLOCK_LIST ? "Block List Signer" : "Signer List Signer";
 		CheckResult.Status status = CheckResult.Status.VALID;
-		// BSI lists are BER encoded (BSI TR-03129-2, 8.1 and 9)
+		// BSI lists are BER encoded (BSI TR-03129-2, 8.1 and 9), block lists SHOULD be DER encoded (BSI TR-03129-3, B.1)
+		if (listType == ListType.BLOCK_LIST && !isDer()) {
+			sw.write("Note: the Block List SHOULD be DER encoded but is not (BSI TR-03129-3, B.1).\n");
+		}
 		if (icao) {
-			try {
-				if (!Arrays.equals(binary, ASN1Primitive.fromByteArray(binary).getEncoded(ASN1Encoding.DER))) {
-					sw.write("The " + listType.name + " MUST be DER encoded but is not (ICAO Doc 9303 Part 12, " + (masterList ? "9" : "10") + ")!\n");
-					status = CheckResult.Status.INVALID;
-				}
-			} catch (IOException e) {
-				sw.write("Couldn't check the DER encoding: " + e.getLocalizedMessage() + "\n");
+			if (!isDer()) {
+				sw.write("The " + listType.name + " MUST be DER encoded but is not (ICAO Doc 9303 Part 12, " + (masterList ? "9" : "10") + ")!\n");
+				status = CheckResult.Status.INVALID;
 			}
 		}
 		if (cmsSignedData.getVersion() != 3) {
@@ -385,6 +385,15 @@ public class SignedDataParser {
 		return status;
 	}
 
+	/** @return true if the input is DER encoded; an input that can't be re-encoded is taken as DER, CMS parsed it already */
+	private boolean isDer() {
+		try {
+			return Arrays.equals(binary, ASN1Primitive.fromByteArray(binary).getEncoded(ASN1Encoding.DER));
+		} catch (IOException e) {
+			return true;
+		}
+	}
+
 	/** @return the certificate the SignerInfo refers to or null if the SignedData object doesn't contain it */
 	private X509CertificateHolder signerCertificate() {
 		Collection<X509CertificateHolder> signerCerts = cmsSignedData.getCertificates().getMatches(signerInfo.getSID());
@@ -449,7 +458,7 @@ public class SignedDataParser {
 			dListParser = new DeviationListParser(dList);
 		} else {
 			try {
-				dListParser = new CertificateListParser(listType, octets);
+				dListParser = listType == ListType.BLOCK_LIST ? new BlockListParser(octets) : new CertificateListParser(listType, octets);
 			} catch (Exception e) {
 				throw new IllegalArgumentException("can't parse the content of the " + listType.name + ": " + e.getLocalizedMessage(), e);
 			}
