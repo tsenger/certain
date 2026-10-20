@@ -244,9 +244,9 @@ public class CertainMain {
 		raise(EXIT_USAGE);
 	}
 
-	/** Prints the text of a check and takes its status into account for the exit code. */
+	/** Prints the text of a check (if any) and takes its status into account for the exit code. */
 	private void print(CheckResult result) {
-		System.out.println(result.getText());
+		if (!result.getText().isEmpty()) System.out.println(result.getText());
 		switch (result.getStatus()) {
 		case VALID: break;
 		case NOT_CHECKED: raise(EXIT_NOT_CHECKED); break;
@@ -295,10 +295,7 @@ public class CertainMain {
 
 		System.out.println(cvParser.getContentString(showDetails));
 
-		// Only if certificates are given, otherwise there is nothing to compare with
-		if (!certStore.isEmpty()) {
-			print(checker.checkDomainParameters(dvReq));
-		}
+		print(checker.checkDomainParameters(dvReq));
 
 		if (showDetails) System.out.println("Inner Signature:\n" + HexString.bufferToHex(dvReq.getInnerSignature(), true));
 		print(checker.checkInnerSignature(dvReq));

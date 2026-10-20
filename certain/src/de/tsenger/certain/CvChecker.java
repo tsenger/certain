@@ -75,16 +75,24 @@ public class CvChecker {
 				verifier -> verifier.hasValidOuterSignature(req));
 	}
 
-	/** Checks that the domain parameters of a request are those of the CVCA referenced by the request. */
+	/**
+	 * Checks the domain parameters of a request: an ECDSA key MUST contain them (BSI TR-03110 Part 3, D.3.3), and
+	 * they have to be those of the CVCA referenced by the request. Without certificates there is nothing to compare,
+	 * and RSA keys have no domain parameters; the result has no text then.
+	 */
 	public CheckResult checkDomainParameters(CVCertificateRequest req) {
+		PublicKeyDataObject reqKey = req.getCertificateBody().getPublicKey();
+		if (!hasDomainParameters(reqKey)) {
+			return new CheckResult(Status.INVALID, "Deviation from BSI TR-03110 Part 3, D.3.3: the public key of this request "
+					+ "contains no domain parameters, but certificate requests MUST always contain them.");
+		}
 		String cvcaChr = getCvcaChr(req.getCertificateBody().getCarString(), 3);
+		if (!(reqKey instanceof ECDSAPublicKey) || (cvcaChr == null && certStore.isEmpty())) {
+			return new CheckResult(Status.VALID, "");
+		}
 		if (cvcaChr == null) {
 			return new CheckResult(Status.NOT_CHECKED, "Can't find a matching parent CVCA certificate to this request. "
 					+ "Therefore can't check if CVCA DP are equal to Request DP.");
-		}
-		PublicKeyDataObject reqKey = req.getCertificateBody().getPublicKey();
-		if (!hasDomainParameters(reqKey)) {
-			return new CheckResult(Status.NOT_CHECKED, "This request contains no domain parameters to compare with CVCA " + cvcaChr + ".");
 		}
 		if (!equalDomainParameters(certStore.getCertByCHR(cvcaChr).getBody().getPublicKey(), reqKey)) {
 			return new CheckResult(Status.INVALID, "Domain parameters of this request don't match domain parameters of CVCA " + cvcaChr + ".");

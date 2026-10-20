@@ -184,7 +184,26 @@ public class CertificateBody  extends ASN1Object
         {
             throw new IOException("unsupported public key algorithm " + usage);
         }
+        if (usage.on(EACObjectIdentifiers.id_TA_ECDSA) && hasContextTag(key, 1) && !hasContextTag(key, 7))
+        {
+            // Bouncy Castle only accepts all domain parameters or none
+            throw new IOException("the EC public key contains domain parameters without the cofactor; this is allowed by "
+                + "BSI TR-03110 Part 3, D.3.3, but not supported by certain");
+        }
         return PublicKeyDataObject.getInstance(key);
+    }
+
+    /** @return true if {@code key} contains a context specific data object with the given tag number */
+    private static boolean hasContextTag(ASN1Sequence key, int tagNo)
+    {
+        for (int i = 1; i < key.size(); i++)
+        {
+            if (ASN1TaggedObject.getInstance(key.getObjectAt(i)).hasContextTag(tagNo))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
