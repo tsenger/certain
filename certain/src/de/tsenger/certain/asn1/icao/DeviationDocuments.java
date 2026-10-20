@@ -1,6 +1,5 @@
 package de.tsenger.certain.asn1.icao;
 
-import org.bouncycastle.asn1.ASN1Choice;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1Primitive;
@@ -34,31 +33,21 @@ public class DeviationDocuments extends ASN1Object
 	
 	private DeviationDocuments(ASN1Sequence seq) {
 		
-		int index = 0;
-		
 		if (seq.size() > 4) throw new IllegalArgumentException("Bad sequence size: " + seq.size());
    
 		for (int i=0; i<seq.size();i++) {
-
-			if (seq.getObjectAt(index) instanceof ASN1TaggedObject) {
-				ASN1TaggedObject tagObj = ASN1TaggedObject.getInstance(seq.getObjectAt(index));
-				if (tagObj.getTagNo() == 0)	documentType = ASN1PrintableString.getInstance(tagObj, false);
-				else if (tagObj.getTagNo() == 4) issuingDate = IssuancePeriod.getInstance(ASN1Sequence.getInstance(tagObj, false));
-				else if (tagObj.getTagNo() == 5) documentNumbers = ASN1Set.getInstance(tagObj, false);
+			ASN1TaggedObject tagObj = ASN1TaggedObject.getInstance(seq.getObjectAt(i));
+			switch (tagObj.getTagNo()) {
+			case 0: documentType = ASN1PrintableString.getInstance(tagObj, false); break;
+			case DocumentSignerIdentifier.TYPE_issuerAndSerialNumber:
+			case DocumentSignerIdentifier.TYPE_subjectKeyIdentifier:
+			case DocumentSignerIdentifier.TYPE_certificateDigest:
+				dscIdentifier = DocumentSignerIdentifier.getInstance(tagObj); break;
+			case 4: issuingDate = IssuancePeriod.getInstance(ASN1Sequence.getInstance(tagObj, false)); break;
+			case 5: documentNumbers = ASN1Set.getInstance(tagObj, false); break;
+			default: throw new IllegalArgumentException("unknown tag in DeviationDocuments: " + tagObj.getTagNo());
 			}
-
-			if (seq.getObjectAt(index) instanceof ASN1Choice) {
-				dscIdentifier = DocumentSignerIdentifier.getInstance(seq.getObjectAt(index));
-			}
-//			if (seq.getObjectAt(index) instanceof IssuancePeriod) {
-//				issuingDate = IssuancePeriod.getInstance(seq.getObjectAt(index++));
-//			}
-//			if (seq.getObjectAt(index) instanceof ASN1Set) {
-//				documentNumbers = ASN1Set.getInstance(ASN1TaggedObject.getInstance(seq.getObjectAt(index++)), false);
-//			}
 		}
-		
-		
 	}
 	
 	public static DeviationDocuments getInstance(Object obj)

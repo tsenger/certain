@@ -96,7 +96,8 @@ public class DeviationDescription extends ASN1Object
 	}
 	
 	public String getDescription() {
-		return description.getString();
+		if (description != null) return description.getString();
+		return null;
 	}
 	
 	public ASN1ObjectIdentifier getDeviationType() {

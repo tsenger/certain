@@ -52,5 +52,6 @@ public interface ICAOObjectIdentifiers {
 	public static final ASN1ObjectIdentifier id_Deviation_MRZ_WrongData = id_Deviation_MRZ.branch("1");
 	public static final ASN1ObjectIdentifier id_Deviation_MRZ_WrongCheckDigit = id_Deviation_MRZ.branch("2");
 	
-	public static final ASN1ObjectIdentifier id_Deviation_Chip = id_icao_DeviationList.branch("3");
+	public static final ASN1ObjectIdentifier id_Deviation_Chip = id_icao_DeviationList.branch("4");
+	public static final ASN1ObjectIdentifier id_Deviation_NationalUse = id_icao_DeviationList.branch("5");
 }
