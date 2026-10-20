@@ -34,7 +34,7 @@ import de.tsenger.tools.HexString;
 
 /**
  * Shows and checks defect lists as specified in BSI TR-03129-2, chapter 8 (versions 1 to 3). The defects of the eID
- * application are specified in BSI TR-03129-3; the known ones are shown, but not checked.
+ * application are specified in BSI TR-03129-3, A.2.3; they are shown, but not checked.
  */
 public class DefectListParser extends DListParser {
 
@@ -215,10 +215,10 @@ public class DefectListParser extends DListParser {
 			sw.write("+ eID defect: application integrity uncertain" + oid + "\n");
 			writeParameters(sw, parameters);
 		} else if (type.equals(BSIObjectIdentifiers.eIDSecurityInfoMissing)) {
-			sw.write("+ eID defect: SecurityInfo missing" + oid + "\n");
+			sw.write("+ eID defect: SecurityInfo missing (not defined in BSI TR-03129-2 V1.4.2 or TR-03129-3 V1.40)" + oid + "\n");
 			writeParameters(sw, parameters);
 		} else if (type.equals(BSIObjectIdentifiers.eIDDGMissing)) {
-			sw.write("+ eID defect: data group missing" + oid + "\n");
+			sw.write("+ eID defect: data group missing (not defined in BSI TR-03129-2 V1.4.2 or TR-03129-3 V1.40)" + oid + "\n");
 			if (parameters != null) sw.write("\tData groups: " + integers(parameters) + "\n");
 
 		// General document defects (8.3.3)
@@ -238,7 +238,7 @@ public class DefectListParser extends DListParser {
 			sw.write("+ Document defect: Document Signer certificate malformed (DEPRECATED, use Certificate malformed)" + oid + "\n");
 			if (required(sw, violations, where, type, parameters)) sw.write("\t" + enumerated(parameters, MALFORMED_STATUS, true) + "\n");
 		} else if (type.equals(BSIObjectIdentifiers.EAC2PrivilegedTerminalInfoMissing)) {
-			sw.write("+ Document defect: EAC2 PrivilegedTerminalInfo missing" + oid + "\n");
+			sw.write("+ Document defect: EAC2 PrivilegedTerminalInfo missing (not defined in BSI TR-03129-2 V1.4.2 or TR-03129-3 V1.40)" + oid + "\n");
 			writeParameters(sw, parameters);
 		} else if (type.equals(BSIObjectIdentifiers.CertificateMalformed)) {
 			sw.write("+ Document defect: certificate incorrectly encoded or malformed" + oid + "\n");
@@ -249,7 +249,17 @@ public class DefectListParser extends DListParser {
 			}
 		} else {
 			sw.write("! Unknown defect type, not defined in BSI TR-03129-2, 8.3" + oid + "\n");
-			if (type.on(BSIObjectIdentifiers.DocumentDefect)) {
+			// what a document affected by a defect with unknown interpretation may still be used for
+			if (type.on(BSIObjectIdentifiers.AuthDefect)) {
+				sw.write("\tNote: for an authentication defect with unknown interpretation the electronic part of the document "
+						+ "MUST NOT be used (BSI TR-03129-3, A.2.1).\n");
+			} else if (type.on(BSIObjectIdentifiers.ePassportDefect)) {
+				sw.write("\tNote: for a defect of the ePassport application with unknown interpretation the ePassport application "
+						+ "MUST NOT be used (BSI TR-03129-3, A.2.2).\n");
+			} else if (type.on(BSIObjectIdentifiers.eIDDefect)) {
+				sw.write("\tNote: for a defect of the eID application with unknown interpretation the eID application "
+						+ "SHOULD NOT be used (BSI TR-03129-3, A.2.3).\n");
+			} else if (type.on(BSIObjectIdentifiers.DocumentDefect)) {
 				sw.write("\tNote: for a general document defect with unknown interpretation the electronic part of the document "
 						+ "SHOULD NOT be used for document checks (BSI TR-03129-2, 8.3.3).\n");
 			}

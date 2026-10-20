@@ -381,7 +381,9 @@ public interface BSIObjectIdentifiers {
 	public static final ASN1ObjectIdentifier EAC2PrivilegedTerminalInfoMissing = DocumentDefect.branch("5");
 	public static final ASN1ObjectIdentifier CertificateMalformed = DocumentDefect.branch("6");
 
+	// TR-03129-2, 9.1 and TR-03129-3, C.1 assign the same object identifier, as eContentType and as signed attribute type
 	public static final ASN1ObjectIdentifier DocumentSignerList = mrtd.branch("6");
+	public static final ASN1ObjectIdentifier ListContentDescription = mrtd.branch("6");
 
 	// nPKD (BSI TR-03129-2, 8.2 and 9)
 	public static final ASN1ObjectIdentifier npkd = applications.branch("11");

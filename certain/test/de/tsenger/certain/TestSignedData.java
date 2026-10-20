@@ -9,6 +9,10 @@ import java.util.Date;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1Encoding;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.DERSet;
+import org.bouncycastle.asn1.DERUTF8String;
+import org.bouncycastle.asn1.cms.Attribute;
+import org.bouncycastle.asn1.cms.AttributeTable;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.SubjectKeyIdentifier;
@@ -17,11 +21,14 @@ import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils;
 import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
 import org.bouncycastle.cms.CMSProcessableByteArray;
 import org.bouncycastle.cms.CMSSignedDataGenerator;
+import org.bouncycastle.cms.DefaultSignedAttributeTableGenerator;
 import org.bouncycastle.cms.jcajce.JcaSignerInfoGeneratorBuilder;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
+
+import de.tsenger.certain.asn1.eac.BSIObjectIdentifiers;
 
 /**
  * Creates CMS SignedData objects (deviation and defect lists) and their signer certificates for tests.
@@ -68,8 +75,21 @@ final class TestSignedData {
 	 */
 	static byte[] sign(ASN1ObjectIdentifier contentType, byte[] content, KeyPair keyPair, X509CertificateHolder cert,
 			boolean subjectKeyIdentifier) throws Exception {
+		return sign(contentType, content, keyPair, cert, subjectKeyIdentifier, null);
+	}
+
+	/**
+	 * Like {@link #sign(ASN1ObjectIdentifier, byte[], KeyPair, X509CertificateHolder, boolean)}, with the signed attribute
+	 * ListContentDescription (BSI TR-03129-3, C.1) if the description is not null.
+	 */
+	static byte[] sign(ASN1ObjectIdentifier contentType, byte[] content, KeyPair keyPair, X509CertificateHolder cert,
+			boolean subjectKeyIdentifier, String listContentDescription) throws Exception {
 		JcaSignerInfoGeneratorBuilder builder = new JcaSignerInfoGeneratorBuilder(
 				new JcaDigestCalculatorProviderBuilder().setProvider("BC").build());
+		if (listContentDescription != null) {
+			Attribute description = new Attribute(BSIObjectIdentifiers.ListContentDescription, new DERSet(new DERUTF8String(listContentDescription)));
+			builder.setSignedAttributeGenerator(new DefaultSignedAttributeTableGenerator(new AttributeTable(description)));
+		}
 		CMSSignedDataGenerator generator = new CMSSignedDataGenerator();
 		if (subjectKeyIdentifier) {
 			byte[] ski = SubjectKeyIdentifier.fromExtensions(cert.getExtensions()).getKeyIdentifier();

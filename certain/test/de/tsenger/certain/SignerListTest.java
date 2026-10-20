@@ -24,7 +24,8 @@ import org.junit.Test;
 import de.tsenger.certain.asn1.eac.BSIObjectIdentifiers;
 
 /**
- * Checks signer lists (BSI TR-03129-2, 9) and the defect list signer (8.2) with lists created by the test.
+ * Checks signer lists (BSI TR-03129-2, 9), the defect list signer (8.2) and the SignedData profile of both (BSI
+ * TR-03129-3, Table 3) with lists created by the test.
  */
 public class SignerListTest {
 
@@ -38,6 +39,15 @@ public class SignerListTest {
 		assertEquals(result.getText(), CheckResult.Status.VALID, result.getStatus());
 		assertTrue(result.getText(), result.getText().contains("BSI Document Signer List"));
 		assertTrue(result.getText(), result.getText().contains("Private key usage period of the Signer List Signer"));
+		assertTrue(result.getText(), result.getText().contains("listContentDescription: Internal"));
+	}
+
+	@Test
+	public void missingListContentDescriptionFails() throws Exception {
+		CheckResult result = check(DOCUMENT_SIGNER_LIST_SIGNER, privateKeyUsagePeriod(-HOUR / 2, 12 * HOUR), null);
+
+		assertEquals(CheckResult.Status.INVALID, result.getStatus());
+		assertTrue(result.getText(), result.getText().contains("MUST include the ListContentDescription attribute"));
 	}
 
 	@Test
@@ -78,8 +88,8 @@ public class SignerListTest {
 		KeyPair keyPair = keyPair();
 		byte[] list = new DERSequence(new ASN1Encodable[] { new ASN1Integer(0), BSIObjectIdentifiers.DefectList, new DERSet() }).getEncoded();
 
-		CheckResult result = new SignedDataParser(TestSignedData.sign(BSIObjectIdentifiers.DefectList, list, keyPair, certificate(keyPair), true))
-				.checkSignedData();
+		CheckResult result = new SignedDataParser(TestSignedData.sign(BSIObjectIdentifiers.DefectList, list, keyPair, certificate(keyPair), true,
+				"Internal")).checkSignedData();
 
 		assertEquals(CheckResult.Status.VALID, result.getStatus());
 		assertTrue(result.getText(), result.getText().contains("Note: the extended key usage of the DFL Signer certificate SHOULD contain 0.4.0.127.0.7.3.11.2.1.2"));
@@ -87,11 +97,16 @@ public class SignerListTest {
 
 	/** Checks a document signer list signed by a certificate with these extensions. */
 	private static CheckResult check(ExtendedKeyUsage eku, ASN1Encodable privateKeyUsagePeriod) throws Exception {
+		return check(eku, privateKeyUsagePeriod, "Internal");
+	}
+
+	private static CheckResult check(ExtendedKeyUsage eku, ASN1Encodable privateKeyUsagePeriod, String listContentDescription) throws Exception {
 		KeyPair keyPair = keyPair();
 		X509CertificateHolder signer = privateKeyUsagePeriod == null ? certificate(keyPair, Extension.extendedKeyUsage, eku)
 				: certificate(keyPair, Extension.extendedKeyUsage, eku, Extension.privateKeyUsagePeriod, privateKeyUsagePeriod);
 		byte[] list = new DERSequence(new ASN1Encodable[] { new ASN1Integer(0), new DERSet(signer.toASN1Structure()) }).getEncoded();
-		return new SignedDataParser(TestSignedData.sign(BSIObjectIdentifiers.DocumentSignerList, list, keyPair, signer, true)).checkSignedData();
+		return new SignedDataParser(TestSignedData.sign(BSIObjectIdentifiers.DocumentSignerList, list, keyPair, signer, true,
+				listContentDescription)).checkSignedData();
 	}
 
 	/** PrivateKeyUsagePeriod relative to now, in milliseconds. */

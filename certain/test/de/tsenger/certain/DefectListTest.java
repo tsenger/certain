@@ -157,6 +157,13 @@ public class DefectListTest {
 		assertTrue(output, output.contains("Integer(7)"));
 	}
 
+	@Test
+	public void unknownAuthenticationDefectIsNamed() throws Exception {
+		String output = output(V1, v1Defect(knownDefect(BSIObjectIdentifiers.AuthDefect.branch("99"), null)));
+
+		assertTrue(output, output.contains("electronic part of the document MUST NOT be used (BSI TR-03129-3, A.2.1)"));
+	}
+
 	/** Version 1 defect that refers to the signer certificate by issuerAndSerialNumber. */
 	private static ASN1Encodable v1Defect(ASN1Encodable knownDefect) {
 		return new DERSequence(new ASN1Encodable[] { new IssuerAndSerialNumber(SIGNER, SERIAL), new DERSet(knownDefect) });

@@ -17,6 +17,7 @@ import org.bouncycastle.asn1.ASN1Encoding;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.ASN1Primitive;
+import org.bouncycastle.asn1.ASN1UTF8String;
 import org.bouncycastle.asn1.cms.Attribute;
 import org.bouncycastle.asn1.cms.AttributeTable;
 import org.bouncycastle.asn1.cms.CMSAttributes;
@@ -152,16 +153,15 @@ public class SignedDataParser {
 		CheckResult.Status status = CheckResult.Status.VALID;
 
 		sw.write("eContentType: " + signedContentTypeOID + " (" + (listType != null ? listType.name : "unknown, the content is not parsed") + ")\n");
-		if (listType == ListType.DEVIATION_LIST || listType == ListType.MASTER_LIST) {
-			status = checkIcaoListProfile(sw);
-		} else {
+		if (listType == null) {
 			if (cmsSignedData.getVersion() != 3) {
 				sw.write("SignedData Version SHOULD be 3 but is " + cmsSignedData.getVersion() + "!\n");
 			}
-			if (listType == ListType.DEFECT_LIST) {
-				checkDefectListSigner(sw);
-			} else if (listType != null) {
-				status = checkSignerListSigner(sw);
+		} else {
+			status = checkProfile(sw);
+			if (listType.isSignerList()) {
+				CheckResult.Status signer = checkSignerListSigner(sw);
+				if (signer.compareTo(status) > 0) status = signer;
 			}
 		}
 		writeSignedAttributes(sw);
@@ -223,6 +223,8 @@ public class SignedDataParser {
 				sw.write("\tsigningTime: " + Time.getInstance(value).getTime() + "\n");
 			} else if (type.equals(CMSAttributes.messageDigest)) {
 				sw.write("\tmessageDigest: " + HexString.bufferToHex(ASN1OctetString.getInstance(value).getOctets()) + "\n");
+			} else if (type.equals(BSIObjectIdentifiers.ListContentDescription) && value instanceof ASN1UTF8String) {
+				sw.write("\tlistContentDescription: " + ((ASN1UTF8String) value).getString() + "\n");
 			} else {
 				sw.write("\t" + type + ":\n" + ASN1Dump.dumpAsString(attribute.getAttrValues(), true).replaceAll("(?m)^", "\t\t"));
 			}
@@ -230,21 +232,26 @@ public class SignedDataParser {
 	}
 
 	/**
-	 * Checks the SignedData profile of Deviation Lists (ICAO Doc 9303 Part 12, 10.1, Table 19) or Master Lists (9.1,
-	 * Table 18) and their signer certificate. Violated MUSTs make the check fail, RECOMMENDED fields are only noted.
+	 * Checks the SignedData profile and the signer certificate: of Deviation Lists (ICAO Doc 9303 Part 12, 10.1,
+	 * Table 19), Master Lists (9.1, Table 18), and of Defect Lists and signer lists (BSI TR-03129-3, Appendix C, Table 3,
+	 * referred to by BSI TR-03129-2, 8 and 9). Violated MUSTs make the check fail, RECOMMENDED fields are only noted.
 	 */
-	private CheckResult.Status checkIcaoListProfile(StringWriter sw) {
+	private CheckResult.Status checkProfile(StringWriter sw) {
 		boolean masterList = listType == ListType.MASTER_LIST;
-		String table = "ICAO Doc 9303 Part 12, " + (masterList ? "Table 18" : "Table 19");
-		String signer = masterList ? "Master List Signer" : "Deviation List Signer";
+		boolean icao = masterList || listType == ListType.DEVIATION_LIST;
+		String table = icao ? "ICAO Doc 9303 Part 12, " + (masterList ? "Table 18" : "Table 19") : "BSI TR-03129-3, Table 3";
+		String signer = masterList ? "Master List Signer" : icao ? "Deviation List Signer" : listType == ListType.DEFECT_LIST ? "DFL Signer" : "Signer List Signer";
 		CheckResult.Status status = CheckResult.Status.VALID;
-		try {
-			if (!Arrays.equals(binary, ASN1Primitive.fromByteArray(binary).getEncoded(ASN1Encoding.DER))) {
-				sw.write("The " + listType.name + " MUST be DER encoded but is not (ICAO Doc 9303 Part 12, " + (masterList ? "9" : "10") + ")!\n");
-				status = CheckResult.Status.INVALID;
+		// BSI lists are BER encoded (BSI TR-03129-2, 8.1 and 9)
+		if (icao) {
+			try {
+				if (!Arrays.equals(binary, ASN1Primitive.fromByteArray(binary).getEncoded(ASN1Encoding.DER))) {
+					sw.write("The " + listType.name + " MUST be DER encoded but is not (ICAO Doc 9303 Part 12, " + (masterList ? "9" : "10") + ")!\n");
+					status = CheckResult.Status.INVALID;
+				}
+			} catch (IOException e) {
+				sw.write("Couldn't check the DER encoding: " + e.getLocalizedMessage() + "\n");
 			}
-		} catch (IOException e) {
-			sw.write("Couldn't check the DER encoding: " + e.getLocalizedMessage() + "\n");
 		}
 		if (cmsSignedData.getVersion() != 3) {
 			sw.write("SignedData version MUST be v3 but is v" + cmsSignedData.getVersion() + " (" + table + ")!\n");
@@ -276,8 +283,13 @@ public class SignedDataParser {
 				sw.write("The content-type attribute MUST be present and match the eContentType (RFC 5652, 11.1)!\n");
 				status = CheckResult.Status.INVALID;
 			}
+			if (!icao && signedAttributes.get(BSIObjectIdentifiers.ListContentDescription) == null) {
+				sw.write("signedAttrs MUST include the ListContentDescription attribute " + BSIObjectIdentifiers.ListContentDescription
+						+ " (BSI TR-03129-3, Table 3 and C.1)!\n");
+				status = CheckResult.Status.INVALID;
+			}
 		}
-		if (!masterList && signerInfo.getUnsignedAttributes() != null) {
+		if (listType == ListType.DEVIATION_LIST && signerInfo.getUnsignedAttributes() != null) {
 			sw.write("unsignedAttrs MUST NOT be present (" + table + ")!\n");
 			status = CheckResult.Status.INVALID;
 		}
@@ -300,10 +312,15 @@ public class SignedDataParser {
 			sw.write("certificates MUST include the " + signer + " certificate (" + table + ")!\n");
 			return CheckResult.Status.INVALID;
 		}
-		if (masterList && !containsIssuer(signerCert)) {
-			sw.write("Note: the CSCA certificate that issued the Master List Signer certificate SHOULD be included (" + table
-					+ "; 5.3 says MUST).\n");
+		if (listType != ListType.DEVIATION_LIST && !containsIssuer(signerCert)) {
+			sw.write("Note: the CSCA certificate that issued the " + signer + " certificate SHOULD be included (" + table
+					+ (masterList ? "; 5.3 says MUST" : "") + ").\n");
 		}
+		if (listType == ListType.DEFECT_LIST && !hasSigningKeyUsage(signerCert)) {
+			sw.write("Note: the extended key usage of the DFL Signer certificate SHOULD contain " + listType.signingKey.getId()
+					+ " but is " + extendedKeyUsage(signerCert) + "; this will become mandatory (BSI TR-03129-2, 8.2).\n");
+		}
+		if (!icao) return status;
 		BasicConstraints basicConstraints = BasicConstraints.fromExtensions(signerCert.getExtensions());
 		if (basicConstraints != null && basicConstraints.isCA()) {
 			sw.write("The " + listType.name + " is signed by a CA certificate, but it MUST NOT be signed directly by a CSCA ("
@@ -318,21 +335,11 @@ public class SignedDataParser {
 		return status;
 	}
 
-	/** The extended key usage of the DFL Signer SHOULD contain id-electronicDefectListSigningKey (BSI TR-03129-2, 8.2). */
-	private void checkDefectListSigner(StringWriter sw) {
-		X509CertificateHolder signerCert = signerCertificate();
-		if (signerCert != null && !hasSigningKeyUsage(signerCert)) {
-			sw.write("Note: the extended key usage of the DFL Signer certificate SHOULD contain " + listType.signingKey.getId()
-					+ " but is " + extendedKeyUsage(signerCert) + "; this will become mandatory (BSI TR-03129-2, 8.2).\n");
-		}
-	}
-
 	/**
 	 * Checks the Signer List Signer certificate (BSI TR-03129-2, 9.8) and that the signing time is within its private key
-	 * usage period (9.10). The SignedData profile of BSI TR-03129-3 is not checked.
+	 * usage period (9.10).
 	 */
 	private CheckResult.Status checkSignerListSigner(StringWriter sw) {
-		sw.write("Note: the SignedData profile of BSI TR-03129-3, which signer lists SHALL use (BSI TR-03129-2, 9), is not checked.\n");
 		X509CertificateHolder signerCert = signerCertificate();
 		if (signerCert == null) return CheckResult.Status.NOT_CHECKED;
 		CheckResult.Status status = CheckResult.Status.VALID;
