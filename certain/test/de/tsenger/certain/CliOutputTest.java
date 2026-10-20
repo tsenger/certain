@@ -58,21 +58,16 @@ public class CliOutputTest {
 			if (path.startsWith("golden/")) {
 				continue;
 			}
-			if (path.endsWith(".cvcert") || path.endsWith(".cv")) {
-				cases.add(new String[] { name, "-c", file.getPath() });
-				cases.add(new String[] { name + "_details", "-c", file.getPath(), "-d", "-f" });
-			} else if (path.endsWith(".cvreq")) {
-				cases.add(new String[] { name, "-r", file.getPath() });
-				cases.add(new String[] { name + "_details", "-r", file.getPath(), "-d", "-f" });
-			} else if (path.endsWith(".ml")) {
-				cases.add(new String[] { name, "-ml", file.getPath() });
-			} else if (path.startsWith("deviation-lists/") && path.endsWith(".bin")) {
-				cases.add(new String[] { name, "-dl", file.getPath() });
+			if (path.endsWith(".cvcert") || path.endsWith(".cv") || path.endsWith(".cvreq")) {
+				cases.add(new String[] { name, file.getPath() });
+				cases.add(new String[] { name + "_details", file.getPath(), "-d", "-f" });
+			} else if (path.endsWith(".ml") || (path.startsWith("deviation-lists/") && path.endsWith(".bin"))) {
+				cases.add(new String[] { name, file.getPath() });
 			}
 		}
 		for (String dir : new String[] { "dev/AT", "dev/IS", "dev/ST", "de-test/eid", "de-test/epass" }) {
 			String cvca = new File(TestData.ROOT, dir + "/cvca.cvcert").isFile() ? "cvca.cvcert" : "cvca.cv";
-			List<String> chain = new ArrayList<String>(Arrays.asList(dir.replace('/', '_') + "_chain", "-c"));
+			List<String> chain = new ArrayList<String>(Arrays.asList(dir.replace('/', '_') + "_chain"));
 			for (String file : new String[] { cvca, "dv.cvcert", "ta.cvcert" }) {
 				if (new File(TestData.ROOT, dir + "/" + file).isFile()) {
 					chain.add(new File(TestData.ROOT, dir + "/" + file).getPath());

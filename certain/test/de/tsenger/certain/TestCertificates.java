@@ -2,6 +2,7 @@ package de.tsenger.certain;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.PrivateKey;
 import java.security.Security;
 import java.security.Signature;
 import java.security.interfaces.RSAPublicKey;
@@ -92,6 +93,36 @@ final class TestCertificates {
 		return CVCertificateRequest.getInstance(cert.getEncoded());
 	}
 
+	/**
+	 * Creates the encoding of an RSA request (id_TA_RSA_v1_5_SHA_256) for DETEST00002 with CAR DETEST00001, without
+	 * CHAT and dates (BSI TR-03110 Part 3, C.2). If {@code outerSigner} is not null, the request gets an outer
+	 * signature of it with the outer CAR DETEST{@code outerSequence}.
+	 */
+	static byte[] rsaRequest(KeyPair keyPair, KeyPair outerSigner, String outerSequence) throws Exception {
+		ASN1EncodableVector body = new ASN1EncodableVector();
+		for (ASN1Encodable element : children(rsaCertificate(keyPair, "00001", keyPair, "00002",
+				CertificateHolderAuthorization.DV_DOMESTIC).getBody().getEncoded())) {
+			int tag = ((ASN1TaggedObject) element).getTagNo();
+			// CHAT, effective and expiration date
+			if (tag != 0x4C && tag != 0x25 && tag != 0x24) body.add(element);
+		}
+		DERTaggedObject request = sign(body, keyPair.getPrivate(), "SHA256withRSA");
+		if (outerSigner == null) {
+			return request.getEncoded();
+		}
+		DERTaggedObject outerCar = new DERTaggedObject(false, BERTags.APPLICATION, 0x02,
+				new DEROctetString(("DETEST" + outerSequence).getBytes("ISO-8859-1")));
+		Signature signer = Signature.getInstance("SHA256withRSA");
+		signer.initSign(outerSigner.getPrivate());
+		signer.update(request.getEncoded());
+		signer.update(outerCar.getEncoded());
+		ASN1EncodableVector authentication = new ASN1EncodableVector();
+		authentication.add(request);
+		authentication.add(outerCar);
+		authentication.add(new DERTaggedObject(false, BERTags.APPLICATION, 0x37, new DEROctetString(signer.sign())));
+		return new DERTaggedObject(false, BERTags.APPLICATION, 0x07, new DERSequence(authentication)).getEncoded();
+	}
+
 	/** Creates a self-signed ECDSA CVCA certificate (id_TA_ECDSA_SHA_256, sequence number 00001). */
 	static CVCertificate ecCvca(KeyPair keyPair) throws Exception {
 		ASN1ObjectIdentifier algorithm = EACObjectIdentifiers.id_TA_ECDSA_SHA_256;
@@ -132,15 +163,20 @@ final class TestCertificates {
 			}
 			body.add(new DERTaggedObject(false, BERTags.APPLICATION, 0x49, new DERSequence(publicKey)));
 		}
+		return sign(body, keyPair.getPrivate(), "SHA256withCVC-ECDSA").getEncoded();
+	}
+
+	/** Signs the data objects of a body and returns the certificate (or request without outer signature) {@code 7F21}. */
+	private static DERTaggedObject sign(ASN1EncodableVector body, PrivateKey key, String algorithm) throws Exception {
 		DERTaggedObject newBody = new DERTaggedObject(false, BERTags.APPLICATION, 0x4E, new DERSequence(body));
 
-		Signature signer = Signature.getInstance("SHA256withCVC-ECDSA", "BC");
-		signer.initSign(keyPair.getPrivate());
+		Signature signer = Signature.getInstance(algorithm, "BC");
+		signer.initSign(key);
 		signer.update(newBody.getEncoded());
 		ASN1EncodableVector certificate = new ASN1EncodableVector();
 		certificate.add(newBody);
 		certificate.add(new DERTaggedObject(false, BERTags.APPLICATION, 0x37, new DEROctetString(signer.sign())));
-		return new DERTaggedObject(false, BERTags.APPLICATION, 0x21, new DERSequence(certificate)).getEncoded();
+		return new DERTaggedObject(false, BERTags.APPLICATION, 0x21, new DERSequence(certificate));
 	}
 
 	/** @return the data objects contained in the encoded APPLICATION tagged data object */

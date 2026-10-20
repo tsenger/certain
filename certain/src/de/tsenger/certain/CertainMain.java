@@ -9,8 +9,11 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -21,13 +24,15 @@ import com.beust.jcommander.ParameterException;
 
 import de.tsenger.certain.asn1.eac.CVCertificate;
 import de.tsenger.certain.asn1.eac.CVCertificateRequest;
+import de.tsenger.certain.asn1.eac.CertificateBody;
 import de.tsenger.tools.FileSystem;
 import de.tsenger.tools.HexString;
 
 /**
- * Command line interface of certain: reads the files given by the options, prints their contents and the results
- * of the checks, and returns an exit code that summarizes the checks ({@link #EXIT_OK}, {@link #EXIT_INVALID},
- * {@link #EXIT_USAGE}, {@link #EXIT_NOT_CHECKED}).
+ * Command line interface of certain: reads the given files, detects their type from the content (CV certificate,
+ * link certificate, CV certificate request or signed list), prints their contents and the results of the checks in
+ * the order of the arguments, and returns an exit code that summarizes the checks ({@link #EXIT_OK},
+ * {@link #EXIT_INVALID}, {@link #EXIT_USAGE}, {@link #EXIT_NOT_CHECKED}).
  * <p>
  * The output goes to stdout, error messages and the banner go to stderr.
  *
@@ -58,20 +63,25 @@ public class CertainMain {
 	private static final String BANNER = "certain " + VERSION + " - parses and verifies CV certificates (BSI TR-03110), "
 			+ "master, signer, deviation, defect and block lists (ICAO Doc 9303, BSI TR-03129)";
 
-	@Parameter(names = {"--cert","-c"}, variableArity = true, description = "CVCA, DV or terminal certificate files (e.g. -c <file1> [<file2> ...])")
+	@Parameter(description = "<file>...")
+	private List<String> files = new ArrayList<String>();
+
+	// Deprecated since 2.0.0, the file type is detected from the content. Their files are treated like the other
+	// arguments. Remove them in the next major version.
+	@Parameter(names = {"--cert","-c"}, variableArity = true, hidden = true)
 	private List<String> certFileNames;
 
-	@Parameter(names = {"--dvreq","-r"}, description = "DV certificate request file")
-	private String dvReqFileName;
+	@Parameter(names = {"--dvreq","-r"}, hidden = true)
+	private List<String> dvReqFileNames;
 
-	@Parameter(names = {"--linkcert","-l"}, description = "Link certificate file (to a new CVCA)")
-	private String linkCertFileName;
+	@Parameter(names = {"--linkcert","-l"}, hidden = true)
+	private List<String> linkCertFileNames;
 
-	@Parameter(names = {"--masterlist","-ml"}, description = "ICAO CSCA Master List or BSI Signer List file (BSI TR-03129-2, 9)")
-	private String masterListFileName;
+	@Parameter(names = {"--masterlist","-ml"}, hidden = true)
+	private List<String> masterListFileNames;
 
-	@Parameter(names = {"--dlist","-dl"}, description = "Deviation List, Defect List or Block List file, shows all deviations, defects or blocked IDs")
-	private String dListFileName;
+	@Parameter(names = {"--dlist","-dl"}, hidden = true)
+	private List<String> dListFileNames;
 
 	@Parameter(names = {"--help", "-h"}, description = "Show this help and exit", help = true)
 	private boolean help;
@@ -89,11 +99,10 @@ public class CertainMain {
 	/** The date expiration dates are compared with. */
 	private final LocalDate today;
 
+	/** The CV certificates except link certificates, which have the CHR of the new CVCA and would replace it. */
 	private final CertStorage certStore = new CertStorage();
-	private CVCertificateRequest dvReq;
-	private CVCertificate linkCert;
-	private SignedDataParser mlParser;
-	private SignedDataParser sdParser;
+	/** Shows and checks the recognized files, in the order of the arguments. */
+	private final List<Runnable> outputs = new ArrayList<Runnable>();
 
 	private final CertParser cvParser = new CertParser();
 	private CvChecker checker;
@@ -145,7 +154,7 @@ public class CertainMain {
 			System.out.println("certain " + VERSION);
 			return EXIT_OK;
 		}
-		if (!cm.hasInputFiles()) {
+		if (cm.fileNames().isEmpty()) {
 			System.err.println("certain: no input file given");
 			System.err.print(usage(jcmdr));
 			return EXIT_USAGE;
@@ -172,85 +181,103 @@ public class CertainMain {
 		return properties.getProperty("version");
 	}
 
-	private boolean hasInputFiles() {
-		return (certFileNames != null && !certFileNames.isEmpty()) || dvReqFileName != null || linkCertFileName != null
-				|| masterListFileName != null || dListFileName != null;
+	/** The deprecated file options with their files (null if the option is not used). */
+	private Map<String, List<String>> deprecatedOptions() {
+		Map<String, List<String>> options = new LinkedHashMap<String, List<String>>();
+		options.put("-c", certFileNames);
+		options.put("-r", dvReqFileNames);
+		options.put("-l", linkCertFileNames);
+		options.put("-ml", masterListFileNames);
+		options.put("-dl", dListFileNames);
+		return options;
+	}
+
+	/** All input files: the arguments, then the files of the deprecated options. */
+	private List<String> fileNames() {
+		List<String> names = new ArrayList<String>(files);
+		for (List<String> optionFiles : deprecatedOptions().values()) {
+			if (optionFiles != null) names.addAll(optionFiles);
+		}
+		return names;
 	}
 
 	/**
-	 * Reads the input files, prints their contents and checks them.
+	 * Reads all input files, then prints their contents and checks them. All files are read first, so that the
+	 * chain checks see every given certificate.
 	 *
 	 * @return the exit code
 	 */
 	private int check() {
-		readFiles();
+		for (Map.Entry<String, List<String>> option : deprecatedOptions().entrySet()) {
+			if (option.getValue() != null) {
+				System.err.println("certain: option " + option.getKey() + " is deprecated, pass the files as arguments");
+			}
+		}
+		for (String fileName : fileNames()) {
+			readFile(fileName);
+		}
 		checker = new CvChecker(certStore);
-
-		/** CV-Certifikates from certStore **/
-		if (!certStore.isEmpty()) {
-			checkCerts();
-		}
-
-		/** CV-Request **/
-		if (dvReq != null) {
-			checkDvRequest();
-		}
-
-		/** Link Certificate **/
-		if (linkCert != null) {
-			checkLinkCert();
-		}
-
-		/** Master List **/
-		if (mlParser != null) {
-			printListInfo(mlParser);
-		}
-
-		/** Deviation List **/
-		if (sdParser != null) {
-			printListInfo(sdParser);
+		for (Runnable output : outputs) {
+			output.run();
 		}
 		return exitCode;
 	}
 
 	/**
-	 * Reads the files which are set via the command line arguments. Files that can't be read or parsed are reported
-	 * and skipped.
+	 * Reads a file and detects its type from the content: the first byte chooses the parser (SEQUENCE {@code 30} for
+	 * CMS SignedData, {@code 67} for a request with outer signature, {@code 7F} for {@code 7F21}, a CV certificate or
+	 * a request without outer signature). Files that can't be read, recognized or parsed are reported and skipped.
 	 */
-	private void readFiles() {
-		if (certFileNames != null) {
-			for (String fileName : certFileNames) {
-				CVCertificate cert = read(fileName, "CV certificate", CVCertificate::getInstance);
-				if (cert != null) certStore.putCert(cert);
-			}
-		}
-		if (dvReqFileName != null) {
-			dvReq = read(dvReqFileName, "CV certificate request", CVCertificateRequest::getInstance);
-		}
-		if (linkCertFileName != null) {
-			linkCert = read(linkCertFileName, "link certificate", CVCertificate::getInstance);
-		}
-		if (masterListFileName != null) {
-			mlParser = read(masterListFileName, "master list or signer list", SignedDataParser::new);
-		}
-		if (dListFileName != null) {
-			sdParser = read(dListFileName, "deviation/defect list", SignedDataParser::new);
-		}
-	}
-
-	/**
-	 * Reads and parses a file. If that fails, the error is reported and null is returned.
-	 *
-	 * @param type what the file should contain, for the error message
-	 */
-	private <T> T read(String fileName, String type, FileParser<T> parser) {
+	private void readFile(String fileName) {
 		byte[] content;
 		try {
 			content = FileSystem.readFile(fileName);
 		} catch (IOException e) {
 			error(e.getMessage());
-			return null;
+			return;
 		}
+		int tag = content.length > 0 ? content[0] & 0xFF : -1;
+		if (tag == 0x30) {
+			SignedDataParser parser = parse(fileName, content, "signed list", SignedDataParser::new);
+			if (parser != null) outputs.add(() -> printListInfo(parser));
+		} else if (tag == 0x67) {
+			addRequest(fileName, content);
+		} else if (tag == 0x7F) {
+			CVCertificate cert = parse(fileName, content, "CV certificate", bytes -> {
+				CVCertificate parsed = CVCertificate.getInstance(bytes);
+				if (parsed.getBody() == null) throw new IllegalArgumentException("no certificate body (7F4E)");
+				return parsed;
+			});
+			if (cert == null) {
+				return;
+			}
+			CertificateBody body = cert.getBody();
+			// A request has neither CHAT nor dates (BSI TR-03110 Part 3, C.2), a certificate has all of them (C.1).
+			if (body.getCertificateHolderAuthorization() == null && body.getCertificateEffectiveDate() == null
+					&& body.getCertificateExpirationDate() == null) {
+				addRequest(fileName, content);
+			} else if ("CVCA".equals(cert.getRoleDescription()) && !cert.getChrString().equals(cert.getCarString())) {
+				outputs.add(() -> checkLinkCert(cert));
+			} else {
+				certStore.putCert(cert);
+				outputs.add(() -> checkCert(cert));
+			}
+		} else {
+			error("can't recognize " + fileName);
+		}
+	}
+
+	private void addRequest(String fileName, byte[] content) {
+		CVCertificateRequest req = parse(fileName, content, "CV certificate request", CVCertificateRequest::getInstance);
+		if (req != null) outputs.add(() -> checkDvRequest(req));
+	}
+
+	/**
+	 * Parses the content of a file. If that fails, the error is reported and null is returned.
+	 *
+	 * @param type what the file should contain, for the error message
+	 */
+	private <T> T parse(String fileName, byte[] content, String type, FileParser<T> parser) {
 		try {
 			return parser.parse(content);
 		} catch (Exception e) {
@@ -282,34 +309,30 @@ public class CertainMain {
 	}
 
 	/**
-	 * Check all CVCA and DV certificates which are stored in the certStore
+	 * Shows and checks a CVCA, DV or terminal certificate
 	 */
-	private void checkCerts() {
-		for (String chrStr : certStore.getKeys()) {
-			CVCertificate cert = certStore.getCertByCHR(chrStr);
+	private void checkCert(CVCertificate cert) {
+		printBanner(cert.getChrString());
+		if (showFingerprints) printFingerprints(cert);
 
-			printBanner(chrStr);
-			if (showFingerprints) printFingerprints(cert);
-
-			if (cert.getBody().getCertificateHolderAuthorization() == null) {
-				print(new CheckResult(CheckResult.Status.INVALID, "Couldn't find a CHAT -> No valid certificate!"));
-				continue;
-			}
-
-			cvParser.setBody(cert.getBody(), true);
-			System.out.println(cvParser.getContentString(showDetails));
-			printExpirationNote(cert);
-
-			if (showDetails) System.out.println("Signature:\n" + HexString.bufferToHex(cert.getSignature(), true));
-
-			print(checker.checkSignature(cert));
+		if (cert.getBody().getCertificateHolderAuthorization() == null) {
+			print(new CheckResult(CheckResult.Status.INVALID, "Couldn't find a CHAT -> No valid certificate!"));
+			return;
 		}
+
+		cvParser.setBody(cert.getBody(), true);
+		System.out.println(cvParser.getContentString(showDetails));
+		printExpirationNote(cert);
+
+		if (showDetails) System.out.println("Signature:\n" + HexString.bufferToHex(cert.getSignature(), true));
+
+		print(checker.checkSignature(cert));
 	}
 
 	/**
-	 * Check the DV request
+	 * Shows and checks a DV request
 	 */
-	private void checkDvRequest() {
+	private void checkDvRequest(CVCertificateRequest dvReq) {
 		cvParser.setBody(dvReq.getCertificateBody(), false);
 
 		printBanner("Request for " + dvReq.getCertificateBody().getChrString());
@@ -332,9 +355,9 @@ public class CertainMain {
 	}
 
 	/**
-	 * Check the Link certificate
+	 * Shows and checks a link certificate
 	 */
-	private void checkLinkCert() {
+	private void checkLinkCert(CVCertificate linkCert) {
 		printBanner("Link " + linkCert.getCarString() + " -> " + linkCert.getChrString());
 		if (showFingerprints) printFingerprints(linkCert);
 
