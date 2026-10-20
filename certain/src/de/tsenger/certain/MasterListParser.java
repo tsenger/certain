@@ -196,7 +196,7 @@ public class MasterListParser {
 			try {
 				content.write(bout);
 			} catch (IOException | CMSException e) {
-				System.out.println("parseMasterList() Exception: "+e.getLocalizedMessage());
+				System.err.println("parseMasterList() Exception: "+e.getLocalizedMessage());
 			}
 			octets = bout.toByteArray();
 		}
@@ -219,7 +219,7 @@ public class MasterListParser {
 			}
 
 		} catch (Exception e) {
-			System.out.println("parseMasterList() Exception: "+e.getLocalizedMessage());
+			System.err.println("parseMasterList() Exception: "+e.getLocalizedMessage());
 		}
 
 		return cscaCerts;
@@ -242,7 +242,7 @@ public class MasterListParser {
 				X509Certificate cert = converter.getCertificate(holder);
 				result.add(cert);
 			} catch (CertificateException e) {
-				System.out.println("parseMasterListSignerCertificates() Exception: "+e.getLocalizedMessage());
+				System.err.println("parseMasterListSignerCertificates() Exception: "+e.getLocalizedMessage());
 			} 
 		 }
 		return result;

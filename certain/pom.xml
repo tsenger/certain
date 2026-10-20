@@ -14,7 +14,16 @@
 				<directory>src</directory>
 				<excludes>
 					<exclude>**/*.java</exclude>
+					<exclude>**/version.properties</exclude>
 				</excludes>
+			</resource>
+			<!-- version.properties holds the version printed by the version option of certain -->
+			<resource>
+				<directory>src</directory>
+				<filtering>true</filtering>
+				<includes>
+					<include>**/version.properties</include>
+				</includes>
 			</resource>
 		</resources>
 		<plugins>

@@ -81,24 +81,27 @@ public class CliOutputTest {
 		return cases;
 	}
 
-	/** Runs the command line tool in-process and returns everything written to stdout and stderr. */
+	/** Runs the command line tool in-process and returns what it wrote to stdout and stderr and its exit code. */
 	private static String runCertain(String[] args) throws Exception {
 		PrintStream originalOut = System.out;
 		PrintStream originalErr = System.err;
-		ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-		PrintStream capture = new PrintStream(buffer, true, "UTF-8");
-		System.setOut(capture);
-		System.setErr(capture);
+		ByteArrayOutputStream out = new ByteArrayOutputStream();
+		ByteArrayOutputStream err = new ByteArrayOutputStream();
+		String result;
+		System.setOut(new PrintStream(out, true, "UTF-8"));
+		System.setErr(new PrintStream(err, true, "UTF-8"));
 		try {
-			CertainMain.main(args);
+			result = "exit code " + CertainMain.run(args);
 		} catch (Throwable t) {
 			// Only the type: messages and stack traces contain class names and line numbers that change with refactorings.
-			capture.println("EXCEPTION " + t.getClass().getName());
+			result = "EXCEPTION " + t.getClass().getName();
 		} finally {
 			System.setOut(originalOut);
 			System.setErr(originalErr);
 		}
-		return new String(buffer.toByteArray(), StandardCharsets.UTF_8);
+		return new String(out.toByteArray(), StandardCharsets.UTF_8)
+				+ "\n--- stderr ---\n" + new String(err.toByteArray(), StandardCharsets.UTF_8)
+				+ "--- " + result + " ---\n";
 	}
 
 	private static List<File> filesBelow(File dir) {

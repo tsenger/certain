@@ -92,7 +92,7 @@ public class SignedDataParser {
 				try {
 					result = verifier.signatureVerified(cmsSignedData);
 				} catch (CertificateException | OperatorCreationException | CMSException e) {
-					System.out.println("Verify failed: "+e.getMessage());
+					System.err.println("Verify failed: "+e.getMessage());
 				}				
 			}				
 		}
@@ -109,12 +109,17 @@ public class SignedDataParser {
 	}
 	
 	
-	public String getSignedDataInfoString() {
+	/**
+	 * Describes the signer certificates and verifies their signatures and the signature of the SignedData object
+	 * with the self-signed signer certificate.
+	 */
+	public CheckResult checkSignedData() {
 
 		StringWriter sw = new StringWriter();
+		CheckResult.Status status = CheckResult.Status.VALID;
 
 		if (cmsSignedData.getVersion() != 3)
-			System.out.println("SignedData Version SHOULD be 3 but is " + cmsSignedData.getVersion() + "!");
+			sw.write("SignedData Version SHOULD be 3 but is " + cmsSignedData.getVersion() + "!\n");
 
 		sw.write("SignedData object contains " + dListSignerCertificates.size() + " Signer certificates:\n\n");
 
@@ -140,18 +145,22 @@ public class SignedDataParser {
 				} catch (InvalidKeyException | CertificateException | NoSuchAlgorithmException | NoSuchProviderException | SignatureException e) {
 					sw.write("Verifying signature of \"" + ((X509Certificate) cert).getSubjectDN() + "\" failed: ");
 					sw.write(e.getLocalizedMessage() + "\n\n");
+					status = CheckResult.Status.INVALID;
 				}
 			} else {
 				sw.write("Couldn't verify signature because of missing issuer certificate!\n\n");
 			}			
 		}
 		if (pubKey != null) {
-			sw.write("Signature of SignedData object is "+(verifySignedData()?"VALID":"!!! INVALID !!!")+"\n");
+			boolean valid = verifySignedData();
+			sw.write("Signature of SignedData object is "+(valid?"VALID":"!!! INVALID !!!")+"\n");
+			if (!valid) status = CheckResult.Status.INVALID;
 		} else {
 			sw.write("SignedData signature couldn't be verified because of missing issuer certificate!\n");
+			status = CheckResult.Status.NOT_CHECKED;
 		}
 
-		return sw.toString();
+		return new CheckResult(status, sw.toString());
 	}
 
 
@@ -185,7 +194,7 @@ public class SignedDataParser {
 			try {
 				content.write(bout);
 			} catch (IOException | CMSException e) {
-				System.out.println(e.getLocalizedMessage());
+				System.err.println(e.getLocalizedMessage());
 			}
 			
 			byte[] octets = bout.toByteArray();

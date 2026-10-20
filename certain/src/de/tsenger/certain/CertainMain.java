@@ -1,19 +1,15 @@
 package de.tsenger.certain;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.security.Security;
-import java.security.spec.InvalidKeySpecException;
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
+import java.util.Properties;
 
-import org.bouncycastle.asn1.ASN1ObjectIdentifier;
-import org.bouncycastle.asn1.ASN1ParsingException;
-import org.bouncycastle.eac.EACException;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.operator.OperatorCreationException;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
@@ -21,573 +17,379 @@ import com.beust.jcommander.ParameterException;
 
 import de.tsenger.certain.asn1.eac.CVCertificate;
 import de.tsenger.certain.asn1.eac.CVCertificateRequest;
-import de.tsenger.certain.asn1.eac.CertificateHolderAuthorization;
-import org.bouncycastle.asn1.eac.EACObjectIdentifiers;
-import org.bouncycastle.asn1.eac.ECDSAPublicKey;
-import org.bouncycastle.asn1.eac.PublicKeyDataObject;
-import org.bouncycastle.asn1.eac.RSAPublicKey;
 import de.tsenger.tools.FileSystem;
 import de.tsenger.tools.HexString;
 
 /**
- * @author Tobias Senger
- * @version 1.0.0 build 231031
+ * Command line interface of certain: reads the files given by the options, prints their contents and the results
+ * of the checks, and returns an exit code that summarizes the checks ({@link #EXIT_OK}, {@link #EXIT_INVALID},
+ * {@link #EXIT_USAGE}, {@link #EXIT_NOT_CHECKED}).
+ * <p>
+ * The output goes to stdout, error messages and the banner go to stderr.
  *
+ * @author Tobias Senger
  */
 public class CertainMain {
-	
-	private static final String version = "1.0.0 build 231031";
-	
-	private static JCommander jcmdr;
 
-	@Parameter(names = {"--cert","-c"}, variableArity = true, description = "CVCA or DV certificate input files. Parameter can receive multiply values. (e.g. -cert <file1> [<file2> [<file3>] ... ]")
-	public List<String> certFileNames;
-	
-	@Parameter(names = {"--dvreq","-r"}, description = "DV request input file")
+	/** Every check passed. */
+	public static final int EXIT_OK = 0;
+	/** At least one check failed, e.g. an invalid signature. */
+	public static final int EXIT_INVALID = 1;
+	/** Wrong usage, or an input file could not be read or parsed. */
+	public static final int EXIT_USAGE = 2;
+	/** At least one check could not be done, e.g. because the issuer certificate is missing. */
+	public static final int EXIT_NOT_CHECKED = 3;
+
+	/** The exit codes in increasing priority: if several apply, the last one wins. */
+	private static final List<Integer> EXIT_PRIORITY = Arrays.asList(EXIT_OK, EXIT_NOT_CHECKED, EXIT_USAGE, EXIT_INVALID);
+
+	private static final String EXIT_CODES_HELP = "  Exit codes:\n"
+			+ "    0  every check passed\n"
+			+ "    1  at least one check failed (e.g. an invalid signature)\n"
+			+ "    2  wrong usage, or an input file could not be read or parsed\n"
+			+ "    3  at least one check could not be done (e.g. missing issuer certificate)\n";
+
+	private static final String VERSION = readVersion();
+
+	private static final String BANNER = "certain " + VERSION + " - parses and verifies CV certificates (BSI TR-03110), "
+			+ "master lists and deviation/defect lists";
+
+	@Parameter(names = {"--cert","-c"}, variableArity = true, description = "CVCA, DV or terminal certificate files (e.g. -c <file1> [<file2> ...])")
+	private List<String> certFileNames;
+
+	@Parameter(names = {"--dvreq","-r"}, description = "DV certificate request file")
 	private String dvReqFileName;
-	
-	@Parameter(names = {"--linkcert","-l"}, description = "Link certificate input file to new CVCA")
-	private String linkCertFileName;
-	
-	@Parameter(names = {"--masterlist","-ml"}, description = "CVCA Master List")
-	private String masterListFileName;
-	
-	@Parameter(names = {"--dlist","-dl"}, description = "shows all defects in the given Deviation/Defect List")
-	private String dListFileName;
-	
-	@Parameter(names = {"--help", "-h"}, description = "need help?", help = true)
-	private boolean help;
-	
-	@Parameter(names = {"--details", "-d"}, description = "Show more details (full publickey values and signature bytes) on the certificates and requests.")
-	private boolean showDetails = false;
-	
-	@Parameter(names = {"--fingerprint", "-f"}, description = "Show MD5, SHA1, SHA224 and SHA256 printerprint for certificates and requests.")
-	private boolean showFingerprints = false;
-	
-	private CertStorage certStore = null;
-	private CVCertificateRequest dvReq = null;
-	private CVCertificate linkCert = null;	
-	
-	private MasterListParser mlParser = null;
-	private DListParser dlParser = null;
-	private SignedDataParser sdParser = null;
-		
-	private CertParser cvParser = null;
-	private CertVerifier verifier;
-	
 
-	public static void main(String[] args) throws IOException {
-		System.out.println("certain (v"+ version + ") - a cv certificate parser");
-		Security.addProvider(new BouncyCastleProvider());
-		CertainMain cm = new CertainMain();
-		
-		jcmdr = new JCommander(cm);
-		jcmdr.setProgramName("certain");
-		
-		try {
-			jcmdr.parse(args);
-			if (args.length==0) throw new ParameterException("No arguments given");
-			cm.run();
-		} catch (ParameterException e) {
-			// handling of wrong arguments
-			System.out.println(e.getMessage());
-			jcmdr.usage();
-		}
+	@Parameter(names = {"--linkcert","-l"}, description = "Link certificate file (to a new CVCA)")
+	private String linkCertFileName;
+
+	@Parameter(names = {"--masterlist","-ml"}, description = "ICAO CSCA Master List file")
+	private String masterListFileName;
+
+	@Parameter(names = {"--dlist","-dl"}, description = "Deviation List or Defect List file, shows all deviations or defects")
+	private String dListFileName;
+
+	@Parameter(names = {"--help", "-h"}, description = "Show this help and exit", help = true)
+	private boolean help;
+
+	@Parameter(names = {"--version", "-V"}, description = "Show the version and exit")
+	private boolean version;
+
+	@Parameter(names = {"--details", "-d"}, description = "Show more details (full public key values and signature bytes) on the certificates and requests")
+	private boolean showDetails = false;
+
+	@Parameter(names = {"--fingerprint", "-f"}, description = "Show MD5, SHA-1, SHA-224 and SHA-256 fingerprints of certificates and requests")
+	private boolean showFingerprints = false;
+
+	private final CertStorage certStore = new CertStorage();
+	private CVCertificateRequest dvReq;
+	private CVCertificate linkCert;
+	private MasterListParser mlParser;
+	private SignedDataParser sdParser;
+
+	private final CertParser cvParser = new CertParser();
+	private CvChecker checker;
+	private int exitCode = EXIT_OK;
+
+	/** Parses the content of an input file. */
+	private interface FileParser<T> {
+		T parse(byte[] content) throws Exception;
+	}
+
+	public static void main(String[] args) {
+		System.exit(run(args));
 	}
 
 	/**
-	 * 
+	 * Runs certain with the given command line arguments.
+	 *
+	 * @return the exit code
 	 */
-	public void run() {
-		if (help) jcmdr.usage();
-		
-		readFilesAndGetInstances();
-		cvParser = new CertParser();
-		
+	public static int run(String... args) {
+		CertainMain cm = new CertainMain();
+		JCommander jcmdr = JCommander.newBuilder().addObject(cm).programName("certain").build();
+
+		try {
+			jcmdr.parse(args);
+		} catch (ParameterException e) {
+			System.err.println("certain: " + e.getMessage());
+			System.err.println("Try 'certain --help' for more information.");
+			return EXIT_USAGE;
+		}
+		if (cm.help) {
+			System.out.print(usage(jcmdr));
+			return EXIT_OK;
+		}
+		if (cm.version) {
+			System.out.println("certain " + VERSION);
+			return EXIT_OK;
+		}
+		if (!cm.hasInputFiles()) {
+			System.err.println("certain: no input file given");
+			System.err.print(usage(jcmdr));
+			return EXIT_USAGE;
+		}
+
+		System.err.println(BANNER);
+		Security.addProvider(new BouncyCastleProvider());
+		return cm.check();
+	}
+
+	private static String usage(JCommander jcmdr) {
+		StringBuilder sb = new StringBuilder(BANNER + "\n");
+		jcmdr.getUsageFormatter().usage(sb);
+		return sb.append(EXIT_CODES_HELP).toString();
+	}
+
+	private static String readVersion() {
+		Properties properties = new Properties();
+		try (InputStream in = CertainMain.class.getResourceAsStream("version.properties")) {
+			properties.load(in);
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+		return properties.getProperty("version");
+	}
+
+	private boolean hasInputFiles() {
+		return (certFileNames != null && !certFileNames.isEmpty()) || dvReqFileName != null || linkCertFileName != null
+				|| masterListFileName != null || dListFileName != null;
+	}
+
+	/**
+	 * Reads the input files, prints their contents and checks them.
+	 *
+	 * @return the exit code
+	 */
+	private int check() {
+		readFiles();
+		checker = new CvChecker(certStore);
+
 		/** CV-Certifikates from certStore **/
 		if (!certStore.isEmpty()) {
 			checkCerts();
-		}		
-		
-		/** CV-Request **/
-		if (dvReq!=null) {
-			checkDvRequest();
-		}		
-		
-		/** Link Certificate **/
-		if (linkCert!=null) {	
-			checkLinkCert();
-		}
-		
-		/** Master List **/
-		if (mlParser!=null) {
-			printMasterListInfo();
-		}
-		
-		/** Deviation List **/
-		if (dlParser!=null) {
-			printDListInfo();
 		}
 
+		/** CV-Request **/
+		if (dvReq != null) {
+			checkDvRequest();
+		}
+
+		/** Link Certificate **/
+		if (linkCert != null) {
+			checkLinkCert();
+		}
+
+		/** Master List **/
+		if (mlParser != null) {
+			System.out.println(mlParser.getMasterListInfoString(showDetails));
+		}
+
+		/** Deviation List **/
+		if (sdParser != null) {
+			printDListInfo();
+		}
+		return exitCode;
 	}
 
 	/**
-	 * Read the files which are set via the command line arguments and set the CVCerticate / CVCertificateRequest instances.
+	 * Reads the files which are set via the command line arguments. Files that can't be read or parsed are reported
+	 * and skipped.
 	 */
-	private void readFilesAndGetInstances() {
-		byte[] tempBytes = null;
-		CVCertificate tmpCvCert;
-		certStore = new CertStorage();
-		
-		if ((certFileNames!=null)&&(!certFileNames.isEmpty())) {		
-			for (Iterator<String> i = certFileNames.iterator(); i.hasNext();) {	
-				try {
-					tempBytes = FileSystem.readFile(i.next());
-					tmpCvCert = CVCertificate.getInstance(tempBytes);
-					certStore.putCert(tmpCvCert);
-				} catch (ASN1ParsingException e) {
-					System.out.println(e.getLocalizedMessage());				
-				} catch (IOException e) {
-					System.err.println("Error while open file "+e.getMessage());
-				}				
+	private void readFiles() {
+		if (certFileNames != null) {
+			for (String fileName : certFileNames) {
+				CVCertificate cert = read(fileName, "CV certificate", CVCertificate::getInstance);
+				if (cert != null) certStore.putCert(cert);
 			}
 		}
-		
-		if (dvReqFileName!=null) {			
-			try {
-				tempBytes = FileSystem.readFile(dvReqFileName);
-				dvReq = CVCertificateRequest.getInstance(tempBytes);
-			} catch (ASN1ParsingException e) {
-				System.out.println(e.getLocalizedMessage());				
-			} catch (IOException e) {
-				System.err.println("Error while open file "+e.getMessage());
-			}	
+		if (dvReqFileName != null) {
+			dvReq = read(dvReqFileName, "CV certificate request", CVCertificateRequest::getInstance);
 		}
-		
-		if (linkCertFileName!=null) {
-			try {
-				tempBytes = FileSystem.readFile(linkCertFileName);
-				linkCert = CVCertificate.getInstance(tempBytes);
-			} catch (ASN1ParsingException e) {
-				System.out.println(e.getLocalizedMessage());				
-			} catch (IOException e) {
-				System.err.println("Error while open file "+e.getMessage());
-			}	
+		if (linkCertFileName != null) {
+			linkCert = read(linkCertFileName, "link certificate", CVCertificate::getInstance);
 		}
-		
-		if (masterListFileName!=null) {
-			try {
-				tempBytes = FileSystem.readFile(masterListFileName);
-				mlParser = new MasterListParser(tempBytes);			
-			} catch (Exception e) {
-				System.err.println("Error while open file "+e.getMessage());
-			}	
+		if (masterListFileName != null) {
+			mlParser = read(masterListFileName, "master list", MasterListParser::new);
 		}
-		
-		if (dListFileName!=null) {
-			try {
-				tempBytes = FileSystem.readFile(dListFileName);
-				sdParser = new SignedDataParser(tempBytes);
-				dlParser = sdParser.getDListParser();
-			} catch (Exception e) {
-				System.err.println("Error while open file "+e.getMessage());
-			}	
+		if (dListFileName != null) {
+			sdParser = read(dListFileName, "deviation/defect list", SignedDataParser::new);
 		}
-		
 	}
-	
+
+	/**
+	 * Reads and parses a file. If that fails, the error is reported and null is returned.
+	 *
+	 * @param type what the file should contain, for the error message
+	 */
+	private <T> T read(String fileName, String type, FileParser<T> parser) {
+		byte[] content;
+		try {
+			content = FileSystem.readFile(fileName);
+		} catch (IOException e) {
+			error(e.getMessage());
+			return null;
+		}
+		try {
+			return parser.parse(content);
+		} catch (Exception e) {
+			// The parsers throw different runtime exceptions on invalid input, the message describes the problem.
+			error("can't parse " + fileName + " as " + type + ": " + e.getMessage());
+			return null;
+		}
+	}
+
+	private void error(String message) {
+		System.err.println("certain: " + message);
+		raise(EXIT_USAGE);
+	}
+
+	/** Prints the text of a check and takes its status into account for the exit code. */
+	private void print(CheckResult result) {
+		System.out.println(result.getText());
+		switch (result.getStatus()) {
+		case VALID: break;
+		case NOT_CHECKED: raise(EXIT_NOT_CHECKED); break;
+		case INVALID: raise(EXIT_INVALID); break;
+		}
+	}
+
+	private void raise(int code) {
+		if (EXIT_PRIORITY.indexOf(code) > EXIT_PRIORITY.indexOf(exitCode)) {
+			exitCode = code;
+		}
+	}
+
 	/**
 	 * Check all CVCA and DV certificates which are stored in the certStore
 	 */
 	private void checkCerts() {
-		for (Iterator<String> i = certStore.getKeys().iterator(); i.hasNext();) {	
-			
-			String chrStr = i.next();				
+		for (String chrStr : certStore.getKeys()) {
 			CVCertificate cert = certStore.getCertByCHR(chrStr);
-			
+
 			printBanner(chrStr);
 			if (showFingerprints) printFingerprints(cert);
-			
-			int role=0;
-			try {
-				role = cert.getHolderAuthorizationRole()&0xC0;
-			} catch (Exception e1) {
-				System.out.println("Couldn't find a CHAT -> No valid certificate!");
-				return;
+
+			if (cert.getBody().getCertificateHolderAuthorization() == null) {
+				print(new CheckResult(CheckResult.Status.INVALID, "Couldn't find a CHAT -> No valid certificate!"));
+				continue;
 			}
-			if (role==CertificateHolderAuthorization.CVCA) {
-				//TODO this is a CVCA, is there anything to do?
-			}
-			if (role==CertificateHolderAuthorization.DV_OFFICIAL_DOMESTIC||role==CertificateHolderAuthorization.DV_NON_OFFICIAL_FOREIGN) {
-				//TODO this is a DV, is there anything to do?
-			}
-			if (role==CertificateHolderAuthorization.TERMINAL) {
-				//TODO this is a TERMINAL, is there anything to do?
-			}
-			
+
 			cvParser.setBody(cert.getBody(), true);
-			System.out.println(cvParser.getContentString(showDetails));		
-			
-			if (showDetails) System.out.println("Signature:\n"+HexString.bufferToHex(cert.getSignature(), true));
-			
-			//verfiy signature		
-			String cvcaChrStr = getCvcaChr(cert.getChrString(),3);
-			CVCertificate cvcaCert = certStore.getCertByCHR(cvcaChrStr);
-			CVCertificate parentCert = certStore.getCertByCHR(cert.getCarString());
-			
-			// If a CVCA is available
-			if (cvcaCert!=null) {
-				try {
-					/* if cert is not an CVCA and it uses ECDSA algorithm, 
-					 * then it doesn't contain the complete EC curve parameter
-					 *  so that we have to use the EC curve parameters from the parent CVCA certificate */
-					if ((!cert.getRoleDescription().equals("CVCA"))&&cert.getBody().getPublicKey().getUsage().on(EACObjectIdentifiers.id_TA_ECDSA)) // Terminal or DV certificate
-					{
-						verifier = new CertVerifier(cvcaCert.getBody().getPublicKey(),parentCert.getBody().getPublicKey());
-					}
-					else {	// CVCA certificate or signature algorithm is RSA 
-						verifier = new CertVerifier(cvcaCert.getBody().getPublicKey());
-					}
-					System.out.println("Signature is " + (verifier.hasValidSignature(cert) ? "VALID" : "!!! INVALID !!!"));
-				} catch (Exception e) {
-					System.out.println("Couldn't verifiy signature: " + e.getLocalizedMessage());
-				}
-			} else {
-				System.out.println("Can't check signature. No matching certificate (chain) available.");
-			}
+			System.out.println(cvParser.getContentString(showDetails));
+
+			if (showDetails) System.out.println("Signature:\n" + HexString.bufferToHex(cert.getSignature(), true));
+
+			print(checker.checkSignature(cert));
 		}
 	}
-
 
 	/**
 	 * Check the DV request
 	 */
 	private void checkDvRequest() {
 		cvParser.setBody(dvReq.getCertificateBody(), false);
-		
-		printBanner("Request for "+dvReq.getCertificateBody().getChrString());
+
+		printBanner("Request for " + dvReq.getCertificateBody().getChrString());
 		if (showFingerprints) printFingerprints(dvReq);
-		
+
 		System.out.println(cvParser.getContentString(showDetails));
-		
-		// Check if Domain Parameters are the same as in the CVCA
-		if (certFileNames!=null&&!certFileNames.isEmpty()) {
-			String cvcaChrStr = getCvcaChr(dvReq.getCertificateBody().getCarString(), 3);
-			if (cvcaChrStr==null) {
-				System.out.println("Can't find a matching parent CVCA certifcate to this request. Therefore can't check if CVCA DP are equal to Request DP.");
-			} else	if (!equalDomainParameters(certStore.getCertByCHR(cvcaChrStr).getBody().getPublicKey(), dvReq.getCertificateBody().getPublicKey())) {
-				System.out.println("Domain parameters of this request don't match domain parameters of any provided CVCA certificate.");
-			}
+
+		// Only if certificates are given, otherwise there is nothing to compare with
+		if (!certStore.isEmpty()) {
+			print(checker.checkDomainParameters(dvReq));
 		}
-		
-		if (showDetails) System.out.println("Inner Signature:\n"+HexString.bufferToHex(dvReq.getInnerSignature(),true));
-		
-		//verify inner signature
-		try {
-			verifier = new CertVerifier(dvReq.getCertificateBody().getPublicKey());
-			System.out.println("Inner Signature is " + (verifier.hasValidSignature(dvReq) ? "VALID" : "!!! INVALID !!!"));
-		} catch (Exception e) {
-			System.out.println("Verfifier throws exception: " + e.getLocalizedMessage());
-			guessedDpVerify(dvReq.getCertificateBody().getPublicKey());
-		}	
-		
+
+		if (showDetails) System.out.println("Inner Signature:\n" + HexString.bufferToHex(dvReq.getInnerSignature(), true));
+		print(checker.checkInnerSignature(dvReq));
+
 		if (dvReq.hasOuterSignature()) {
-			String outerCarString = dvReq.getOuterCarStr();
-			System.out.println("\nOuter CAR: "+outerCarString);
-			
-			if (showDetails) System.out.println("Outer Signature:\n"+HexString.bufferToHex(dvReq.getOuterSignature(),true));
-			
-			CVCertificate outerCarCert = certStore.getCertByCHR(outerCarString);
-							
-			if (outerCarCert!=null) {
-				// If outer CAR is a DV cert get the matching CVCA cert
-				int parentCertRole = outerCarCert.getHolderAuthorizationRole()&0xC0;
-				if (parentCertRole==CertificateHolderAuthorization.DV_OFFICIAL_DOMESTIC||parentCertRole==CertificateHolderAuthorization.DV_NON_OFFICIAL_FOREIGN||parentCertRole==CertificateHolderAuthorization.TERMINAL) {
-					String cvcaChrString = getCvcaChr(outerCarString,3);
-					CVCertificate cvcaCert = certStore.getCertByCHR(cvcaChrString);
-					
-					if (cvcaCert!=null) {
-						try {
-							verifier = new CertVerifier(cvcaCert.getBody().getPublicKey(),outerCarCert.getBody().getPublicKey());
-							System.out.println("Outer Signature is " + (verifier.hasValidOuterSignature(dvReq) ? "VALID" : "!!! INVALID !!!"));
-						} catch (Exception e) {
-							System.out.println("Verfifier throws exception: " + e.getLocalizedMessage());
-						}
-					} else {
-						// Try some well known standard domain parameters...
-
-						guessedDpVerify(outerCarCert.getBody().getPublicKey());
-						
-						
-					}
-					
-				} else if (parentCertRole==CertificateHolderAuthorization.CVCA) { // Outer Car is CVCA cert  
-					try {
-						verifier = new CertVerifier(outerCarCert.getBody().getPublicKey());
-						System.out.println("Outer Signature is " + (verifier.hasValidOuterSignature(dvReq) ? "VALID" : "!!! INVALID !!!"));
-					} catch (Exception e) {
-						System.out.println("Verfifier throws exception: " + e.getLocalizedMessage());
-					}
-				}
-				
-			} else {
-				System.out.println("Can't check outer signature without matching parent DV and/or CVCA certifcate.");
-			}
-		} else System.out.println("No outer signature");
+			System.out.println("\nOuter CAR: " + dvReq.getOuterCarStr());
+			if (showDetails) System.out.println("Outer Signature:\n" + HexString.bufferToHex(dvReq.getOuterSignature(), true));
+			print(checker.checkOuterSignature(dvReq));
+		} else {
+			System.out.println("No outer signature");
+		}
 	}
 
-	/** TODO .... 
-	 * @param pubKey
-	 */
-	private void guessedDpVerify(PublicKeyDataObject pubKey) {
-		System.out.println("No Domain Parameters provided via CVCA certifcate but we will try some educated guesses...");
-				
-		boolean result = false;
-		
-		if (pubKey.getUsage().equals(EACObjectIdentifiers.id_TA_ECDSA_SHA_224)) {
-			try {
-				System.out.print("Trying DP brainpool224r1: ");
-				verifier = new CertVerifier("brainpoolp224r1", pubKey);	
-				result = verifier.hasValidOuterSignature(dvReq);
-				System.out.println("signature is " + (result ? "VALID" : "! INVALID !"));
-				if (!result) {
-					System.out.print("Trying DP secp224r1: ");
-					verifier = new CertVerifier("secp224r1", pubKey);	
-					result = verifier.hasValidOuterSignature(dvReq);
-					System.out.println("signature is " + (result ? "VALID" : "! INVALID !"));
-				}
-			} catch (IllegalArgumentException | InvalidKeySpecException | NoSuchProviderException | NoSuchAlgorithmException | EACException | OperatorCreationException e) {
-				System.out.println("failed! Reason: "+e.getLocalizedMessage());
-			}
-		}
-		
-		if (pubKey.getUsage().equals(EACObjectIdentifiers.id_TA_ECDSA_SHA_256)) {
-			try {
-				System.out.print("Trying DP brainpool256r1: ");
-				verifier = new CertVerifier("brainpoolp256r1", pubKey);	
-				result = verifier.hasValidOuterSignature(dvReq);
-				System.out.println("signature is " + (result ? "VALID" : "! INVALID !"));
-				if (!result) {
-					
-				}
-			} catch (IllegalArgumentException | InvalidKeySpecException | NoSuchProviderException | NoSuchAlgorithmException | EACException | OperatorCreationException e) {
-				System.out.println("failed! Reason: "+e.getLocalizedMessage());
-				try {
-					System.out.print("Trying DP secp256r1: ");
-					verifier = new CertVerifier("secp256r1", pubKey);
-					result = verifier.hasValidOuterSignature(dvReq);
-					System.out.println("signature is " + (result ? "VALID" : "! INVALID !"));
-				} catch (InvalidKeySpecException | NoSuchProviderException | NoSuchAlgorithmException | EACException | OperatorCreationException e1) {
-					System.out.println("failed! Reason: "+e1.getLocalizedMessage());
-				}	
-				
-			}
-		}
-		
-		if (pubKey.getUsage().equals(EACObjectIdentifiers.id_TA_ECDSA_SHA_384)) {
-			try {
-				System.out.print("Trying DP brainpool384r1: ");
-				verifier = new CertVerifier("brainpool384r1", pubKey);	
-				result = verifier.hasValidOuterSignature(dvReq);
-				System.out.println("signature is " + (result ? "VALID" : "! INVALID !"));
-				if (!result) {
-					System.out.print("Trying DP secp384r1: ");
-					verifier = new CertVerifier("secp384r1", pubKey);	
-					result = verifier.hasValidOuterSignature(dvReq);
-					System.out.println("signature is " + (result ? "VALID" : "! INVALID !"));
-				}
-			} catch (IllegalArgumentException | InvalidKeySpecException | NoSuchProviderException | NoSuchAlgorithmException | EACException | OperatorCreationException e) {
-				System.out.println("failed! Reason: "+e.getLocalizedMessage());
-			}
-		}
-		
-		if (pubKey.getUsage().equals(EACObjectIdentifiers.id_TA_ECDSA_SHA_512)) {
-			try {
-				System.out.print("Trying DP brainpool512r1: ");
-				verifier = new CertVerifier("brainpool512r1", pubKey);
-				result = verifier.hasValidOuterSignature(dvReq);
-				System.out.println("signature is " + (result ? "VALID" : "! INVALID !"));
-			} catch (IllegalArgumentException | InvalidKeySpecException | NoSuchProviderException | NoSuchAlgorithmException | EACException | OperatorCreationException e) {
-				System.out.println("failed! Reason: "+e.getLocalizedMessage());
-			}
-		}
-
-		if (!result) System.out.println("Out of guesses");
-	}
-	
 	/**
 	 * Check the Link certificate
 	 */
 	private void checkLinkCert() {
-		printBanner("Link "+linkCert.getCarString()+" -> "+linkCert.getChrString());
+		printBanner("Link " + linkCert.getCarString() + " -> " + linkCert.getChrString());
 		if (showFingerprints) printFingerprints(linkCert);
-		
-		//Find machting Public Key
-		CVCertificate cvca1 = certStore.getCertByCHR(linkCert.getChrString());
-		if (cvca1 != null) {
-			boolean hasEqualPk = equalPublicKeys(linkCert.getBody().getPublicKey(), cvca1.getBody().getPublicKey());
-			System.out.println((hasEqualPk ? "The public key in this linkcert is equal to the public key in\n"
-					: "The public key in this linkcert IS NOT EQUAL to the public key in\n") + cvca1.getCarString() + "\n");
-		} else {
-			System.out.println("No CVCA was given. Can't check matching public point to any CVCA.\n");
-		}
-		
-		cvParser.setBody(linkCert.getBody(), true);				
+
+		print(checker.checkLinkPublicKey(linkCert));
+
+		cvParser.setBody(linkCert.getBody(), true);
 		System.out.println(cvParser.getContentString(showDetails));
-				
-		//print Signature
-		if (showDetails) System.out.println("Signature:\n"+HexString.bufferToHex(linkCert.getSignature(),true));
-				
-		//verify signature
-		CVCertificate cvca2 = certStore.getCertByCHR(linkCert.getCarString());
-		if (cvca2!=null) {
-			try {
-				verifier = new CertVerifier(cvca2.getBody().getPublicKey());
-				System.out.println("Signature is " + (verifier.hasValidSignature(linkCert) ? "VALID" : "!!! INVALID !!!"));
-			} catch (Exception e) {
-				System.out.println("Verfifier throws exception: " + e.getLocalizedMessage());
-			}
-		} else {
-			System.out.println("Can't check signature. No matching CVCA certificate available.");
-		}
+
+		if (showDetails) System.out.println("Signature:\n" + HexString.bufferToHex(linkCert.getSignature(), true));
+
+		print(checker.checkSignature(linkCert));
 	}
-	
-	/**
-	 * Show Master List Infos
-	 */
-	private void printMasterListInfo() { //TODO cleanup and print more details 
-		System.out.println(mlParser.getMasterListInfoString(showDetails));		    
-	}
-	
+
 	/**
 	 * Show Defect / Deviation List Infos
 	 */
 	private void printDListInfo() {
-		if (sdParser != null) System.out.println(sdParser.getSignedDataInfoString());
-		if (dlParser != null) System.out.println(dlParser.getDListInfoString(showDetails));  
+		print(sdParser.checkSignedData());
+		DListParser dlParser = sdParser.getDListParser();
+		if (dlParser != null) System.out.println(dlParser.getDListInfoString(showDetails));
 	}
-	
 
-
-	/**
-	 * Rekursive Suche nach dem CVCA CHR
-	 * @param chrStr Start CHR
-	 * @param maxDepth begrenzt die Rekursionstiefe um Endlosschleifen zu vermeiden
-	 * @return CHR des CVCA Zertifikats
-	 */
-	private String getCvcaChr(String chrStr, int maxDepth) {
-		
-		if (maxDepth==0) return null;
-		
-		CVCertificate cert = certStore.getCertByCHR(chrStr);
-		if (cert==null) return null;
-		
-		String role = cert.getRoleDescription();
-		String carStr = cert.getCarString();	
-		
-		if (role=="CVCA") return cert.getChrString();
-		else if (carStr==null) return null;
-		
-		else return getCvcaChr(carStr, --maxDepth);
-	}
-	
-	
 	private void printBanner(String name) {
 		System.out.println("\n---------------------------------------------------");
 		System.out.println("Parsing " + name);
 		System.out.println("---------------------------------------------------");
 	}
-	
-	
-	
+
 	private void printFingerprints(CVCertificateRequest req) {
 		try {
 			printFingerprints(req.getEncoded());
 		} catch (IOException e) {
-			System.out.println("Couldn't calculate the fingerprints: "+e.getLocalizedMessage());
+			System.out.println("Couldn't calculate the fingerprints: " + e.getLocalizedMessage());
 		}
 	}
-	
+
 	private void printFingerprints(CVCertificate cert) {
 		try {
 			printFingerprints(cert.getEncoded());
 		} catch (IOException e) {
-			System.out.println("Couldn't calculate the fingerprints: "+e.getLocalizedMessage());
+			System.out.println("Couldn't calculate the fingerprints: " + e.getLocalizedMessage());
 		}
 	}
 
 	private void printFingerprints(byte[] bytesToHash) {
-		
+
 		HashCalculator hashes = new HashCalculator(bytesToHash);
-		
+
 		System.out.println("Fingerprint MD5:");
-		try {			
+		try {
 			System.out.println(HexString.bufferToHex(hashes.getMD5(), true));
 		} catch (NoSuchAlgorithmException e) {
 			System.out.println(e.getLocalizedMessage());
 		}
-		
+
 		System.out.println("Fingerprint SHA1:");
-		try {			
+		try {
 			System.out.println(HexString.bufferToHex(hashes.getSHA1(), true));
 		} catch (NoSuchAlgorithmException e) {
 			System.out.println(e.getLocalizedMessage());
 		}
-		
+
 		System.out.println("Fingerprint SHA224:");
-		try {			
+		try {
 			System.out.println(HexString.bufferToHex(hashes.getSHA224(), true));
 		} catch (NoSuchAlgorithmException e) {
 			System.out.println(e.getLocalizedMessage());
 		}
-		
+
 		System.out.println("Fingerprint SHA256:");
-		try {			
-			System.out.println(HexString.bufferToHex(hashes.getSHA256(), true)+"\n");
+		try {
+			System.out.println(HexString.bufferToHex(hashes.getSHA256(), true) + "\n");
 		} catch (NoSuchAlgorithmException e) {
 			System.out.println(e.getLocalizedMessage());
-		}		
-	}
-	
-	private boolean equalPublicKeys(PublicKeyDataObject pk1, PublicKeyDataObject pk2) {
-		ASN1ObjectIdentifier pk1Oid = pk1.getUsage();
-		ASN1ObjectIdentifier pk2Oid = pk2.getUsage();
-		if (!pk1Oid.equals(pk2Oid)) return false;
-
-		if (pk1Oid.on(EACObjectIdentifiers.id_TA_ECDSA)) {
-			ECDSAPublicKey ecdsapk1 = (ECDSAPublicKey) pk1;
-			ECDSAPublicKey ecdsapk2 = (ECDSAPublicKey) pk2;
-			if (!Arrays.equals(ecdsapk1.getPublicPointY(), ecdsapk2.getPublicPointY())) return false;
-			return true;
-		} else if (pk1Oid.on(EACObjectIdentifiers.id_TA_RSA)) {
-			RSAPublicKey rsapk1 = (RSAPublicKey) pk1;
-			RSAPublicKey rsapk2 = (RSAPublicKey) pk2;
-			if (!rsapk1.getModulus().equals(rsapk2.getModulus())) return false;
-			if (!rsapk1.getPublicExponent().equals(rsapk2.getPublicExponent())) return false;
-			return true;
 		}
-		return false;
 	}
-	
-	private boolean equalDomainParameters(PublicKeyDataObject pk1, PublicKeyDataObject pk2) {
-		ASN1ObjectIdentifier pk1Oid = pk1.getUsage();
-		ASN1ObjectIdentifier pk2Oid = pk2.getUsage();
-		if (!pk1Oid.equals(pk2Oid)) return false;
-
-		if (pk1Oid.on(EACObjectIdentifiers.id_TA_ECDSA)) {
-			ECDSAPublicKey ecdsapk1 = (ECDSAPublicKey) pk1;
-			ECDSAPublicKey ecdsapk2 = (ECDSAPublicKey) pk2;
-			if (!ecdsapk1.getPrimeModulusP().equals(ecdsapk2.getPrimeModulusP())) return false;
-			if (!ecdsapk1.getFirstCoefA().equals(ecdsapk2.getFirstCoefA())) return false;
-			if (!ecdsapk1.getSecondCoefB().equals(ecdsapk2.getSecondCoefB())) return false;
-			if (!Arrays.equals(ecdsapk1.getBasePointG(), ecdsapk2.getBasePointG())) return false;
-			if (!ecdsapk1.getOrderOfBasePointR().equals(ecdsapk2.getOrderOfBasePointR())) return false;
-			if (!ecdsapk1.getCofactorF().equals(ecdsapk2.getCofactorF())) return false;
-			return true;
-		} else if (pk1Oid.on(EACObjectIdentifiers.id_TA_RSA)) {
-			return true;
-		}
-		return false;
-	}	
-
 }
