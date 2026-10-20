@@ -23,7 +23,7 @@ Usage: certain [options]
     --linkcert, -l
       Link certificate file (to a new CVCA)
     --masterlist, -ml
-      ICAO CSCA Master List file
+      ICAO CSCA Master List or BSI Signer List file (BSI TR-03129-2, 9)
     --version, -V
       Show the version and exit
       Default: false

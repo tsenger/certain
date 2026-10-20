@@ -33,6 +33,9 @@ public interface ICAOObjectIdentifiers {
 	public static final ASN1ObjectIdentifier id_icao_mrtd = id_icao.branch("1");	
 	public static final ASN1ObjectIdentifier id_icao_mrtd_security = id_icao_mrtd.branch("1");
 	
+	public static final ASN1ObjectIdentifier id_icao_cscaMasterList = id_icao_mrtd_security.branch("2");
+	public static final ASN1ObjectIdentifier id_icao_cscaMasterListSigningKey = id_icao_mrtd_security.branch("3");
+
 	public static final ASN1ObjectIdentifier id_icao_DeviationList = id_icao_mrtd_security.branch("7");
 	public static final ASN1ObjectIdentifier id_icao_DeviationListSigningKey = id_icao_mrtd_security.branch("8");
 	

@@ -67,7 +67,7 @@ public class CertainMain {
 	@Parameter(names = {"--linkcert","-l"}, description = "Link certificate file (to a new CVCA)")
 	private String linkCertFileName;
 
-	@Parameter(names = {"--masterlist","-ml"}, description = "ICAO CSCA Master List file")
+	@Parameter(names = {"--masterlist","-ml"}, description = "ICAO CSCA Master List or BSI Signer List file (BSI TR-03129-2, 9)")
 	private String masterListFileName;
 
 	@Parameter(names = {"--dlist","-dl"}, description = "Deviation List or Defect List file, shows all deviations or defects")
@@ -91,7 +91,7 @@ public class CertainMain {
 	private final CertStorage certStore = new CertStorage();
 	private CVCertificateRequest dvReq;
 	private CVCertificate linkCert;
-	private MasterListParser mlParser;
+	private SignedDataParser mlParser;
 	private SignedDataParser sdParser;
 
 	private final CertParser cvParser = new CertParser();
@@ -202,12 +202,12 @@ public class CertainMain {
 
 		/** Master List **/
 		if (mlParser != null) {
-			System.out.println(mlParser.getMasterListInfoString(showDetails));
+			printListInfo(mlParser);
 		}
 
 		/** Deviation List **/
 		if (sdParser != null) {
-			printDListInfo();
+			printListInfo(sdParser);
 		}
 		return exitCode;
 	}
@@ -230,7 +230,7 @@ public class CertainMain {
 			linkCert = read(linkCertFileName, "link certificate", CVCertificate::getInstance);
 		}
 		if (masterListFileName != null) {
-			mlParser = read(masterListFileName, "master list", MasterListParser::new);
+			mlParser = read(masterListFileName, "master list or signer list", SignedDataParser::new);
 		}
 		if (dListFileName != null) {
 			sdParser = read(dListFileName, "deviation/defect list", SignedDataParser::new);
@@ -349,11 +349,11 @@ public class CertainMain {
 	}
 
 	/**
-	 * Show Defect / Deviation List Infos
+	 * Shows and checks a signed list: master list, signer list, deviation list or defect list
 	 */
-	private void printDListInfo() {
-		print(sdParser.checkSignedData());
-		DListParser dlParser = sdParser.getDListParser();
+	private void printListInfo(SignedDataParser parser) {
+		print(parser.checkSignedData());
+		DListParser dlParser = parser.getDListParser();
 		if (dlParser != null) {
 			System.out.println(dlParser.getDListInfoString(showDetails));
 			print(dlParser.check());

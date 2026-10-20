@@ -32,6 +32,7 @@ final class TestSignedData {
 	static final X500Name SIGNER = new X500Name("C=DE,O=Test,OU=Lists,CN=List Signer");
 	/** Larger than 127, so that boxed Integers are not cached. */
 	static final BigInteger SERIAL = BigInteger.valueOf(4711);
+	static final long HOUR = 3600000L;
 
 	static {
 		Security.addProvider(new BouncyCastleProvider());
@@ -48,11 +49,12 @@ final class TestSignedData {
 
 	/**
 	 * Self-signed certificate with the subject {@link #SIGNER}, the serial number {@link #SERIAL}, a subject key
-	 * identifier and the given extensions (pairs of object identifier and value).
+	 * identifier and the given extensions (pairs of object identifier and value). It is valid from an hour ago to tomorrow.
 	 */
 	static X509CertificateHolder certificate(KeyPair keyPair, Object... extensions) throws Exception {
-		JcaX509v3CertificateBuilder builder = new JcaX509v3CertificateBuilder(SIGNER, SERIAL, new Date(),
-				new Date(System.currentTimeMillis() + 86400000L), SIGNER, keyPair.getPublic());
+		// valid from an hour ago to tomorrow, so that the signing time (now) is within the validity
+		JcaX509v3CertificateBuilder builder = new JcaX509v3CertificateBuilder(SIGNER, SERIAL, new Date(System.currentTimeMillis() - HOUR),
+				new Date(System.currentTimeMillis() + 24 * HOUR), SIGNER, keyPair.getPublic());
 		builder.addExtension(Extension.subjectKeyIdentifier, false, new JcaX509ExtensionUtils().createSubjectKeyIdentifier(keyPair.getPublic()));
 		for (int i = 0; i < extensions.length; i += 2) {
 			builder.addExtension((ASN1ObjectIdentifier) extensions[i], false, (ASN1Encodable) extensions[i + 1]);

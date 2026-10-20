@@ -112,7 +112,7 @@ public class DeviationListTest {
 		CheckResult result = new SignedDataParser(sign(validDeviationList(), keyPair, ca)).checkSignedData();
 
 		assertEquals(CheckResult.Status.INVALID, result.getStatus());
-		assertTrue(result.getText(), result.getText().contains("MUST NOT be issued directly by a CSCA"));
+		assertTrue(result.getText(), result.getText().contains("MUST NOT be signed directly by a CSCA (ICAO Doc 9303 Part 3, 7.3.2)"));
 	}
 
 	@Test
