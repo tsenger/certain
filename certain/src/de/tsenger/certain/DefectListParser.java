@@ -215,10 +215,10 @@ public class DefectListParser extends DListParser {
 			sw.write("+ eID defect: application integrity uncertain" + oid + "\n");
 			writeParameters(sw, parameters);
 		} else if (type.equals(BSIObjectIdentifiers.eIDSecurityInfoMissing)) {
-			sw.write("+ eID defect: SecurityInfo missing (not defined in BSI TR-03129-2 V1.4.2 or TR-03129-3 V1.40)" + oid + "\n");
+			sw.write("+ eID defect: SecurityInfo missing (not defined in BSI TR-03129 V1.10, TR-03129-2 V1.4.2 or TR-03129-3 V1.40)" + oid + "\n");
 			writeParameters(sw, parameters);
 		} else if (type.equals(BSIObjectIdentifiers.eIDDGMissing)) {
-			sw.write("+ eID defect: data group missing (not defined in BSI TR-03129-2 V1.4.2 or TR-03129-3 V1.40)" + oid + "\n");
+			sw.write("+ eID defect: data group missing (not defined in BSI TR-03129 V1.10, TR-03129-2 V1.4.2 or TR-03129-3 V1.40)" + oid + "\n");
 			if (parameters != null) sw.write("\tData groups: " + integers(parameters) + "\n");
 
 		// General document defects (8.3.3)
@@ -238,7 +238,7 @@ public class DefectListParser extends DListParser {
 			sw.write("+ Document defect: Document Signer certificate malformed (DEPRECATED, use Certificate malformed)" + oid + "\n");
 			if (required(sw, violations, where, type, parameters)) sw.write("\t" + enumerated(parameters, MALFORMED_STATUS, true) + "\n");
 		} else if (type.equals(BSIObjectIdentifiers.EAC2PrivilegedTerminalInfoMissing)) {
-			sw.write("+ Document defect: EAC2 PrivilegedTerminalInfo missing (not defined in BSI TR-03129-2 V1.4.2 or TR-03129-3 V1.40)" + oid + "\n");
+			sw.write("+ Document defect: EAC2 PrivilegedTerminalInfo missing (not defined in BSI TR-03129 V1.10, TR-03129-2 V1.4.2 or TR-03129-3 V1.40)" + oid + "\n");
 			writeParameters(sw, parameters);
 		} else if (type.equals(BSIObjectIdentifiers.CertificateMalformed)) {
 			sw.write("+ Document defect: certificate incorrectly encoded or malformed" + oid + "\n");
