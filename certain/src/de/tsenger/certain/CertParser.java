@@ -209,7 +209,7 @@ public class CertParser {
 		return chrStr;
 	}
 	
-	private String authorizationToString(CertificateHolderAuthorization chat) {
+	String authorizationToString(CertificateHolderAuthorization chat) {
 		StringWriter sw = new StringWriter();
 				
 		if (chat.getOid().equals(CertificateHolderAuthorization.id_AT)) {		
@@ -218,8 +218,8 @@ public class CertParser {
 					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG2)?"2, ":"")+
 					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG3)?"3, ":"")+
 					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG4)?"4, ":"")+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG4)?"5, ":"")+
-					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG5)?"6, ":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG5)?"5, ":"")+
+					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG6)?"6, ":"")+
 					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG7)?"7, ":"")+
 					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG8)?"8, ":"")+
 					(chat.hasAuth(CertificateHolderAuthorization.AT_RADG9)?"9, ":"")+
