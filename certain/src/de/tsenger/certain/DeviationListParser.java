@@ -1,8 +1,8 @@
 package de.tsenger.certain;
 
-import java.io.IOException;
 import java.io.StringWriter;
 
+import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1Integer;
 import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
@@ -10,6 +10,7 @@ import org.bouncycastle.asn1.ASN1OctetString;
 import org.bouncycastle.asn1.ASN1Set;
 import org.bouncycastle.asn1.DERPrintableString;
 import org.bouncycastle.asn1.cms.IssuerAndSerialNumber;
+import org.bouncycastle.asn1.util.ASN1Dump;
 import org.bouncycastle.asn1.x509.SubjectKeyIdentifier;
 
 import de.tsenger.certain.asn1.icao.CertField;
@@ -36,7 +37,9 @@ public class DeviationListParser extends DListParser{
 		
 		StringWriter sw = new StringWriter();
 			
-		sw.write("\nThis Deviation List contains "+deviationList.getDeviations().size()+" different deviations\n");
+		sw.write("\nDeviation List version: v"+deviationList.getVersion()+"\n");
+		if (deviationList.getDigestAlg() != null) sw.write("Digest algorithm: "+deviationList.getDigestAlg().getAlgorithm().getId()+"\n");
+		sw.write("This Deviation List contains "+deviationList.getDeviations().size()+" different deviations\n");
 				
 		for (int i=0;i<deviationList.getDeviations().size();i++) {
 			sw.write("\n++++++++++++++++++++++++++++++++++ DEVIATION No. "+(i+1)+" ++++++++++++++++++++++++++++++++++\n");
@@ -63,7 +66,8 @@ public class DeviationListParser extends DListParser{
 						break;
 					case 3:
 						ASN1OctetString octStr = ASN1OctetString.getInstance(dscIdentifier.getDSIdentifier());
-						sw.write("\tDigest ("+deviationList.getDigestAlg().getAlgorithm().getId()+"): "+HexString.bufferToHex(octStr.getOctets())+"\n");
+						String digestAlg = deviationList.getDigestAlg() != null ? deviationList.getDigestAlg().getAlgorithm().getId() : "digestAlgorithm missing";
+						sw.write("\tCertificate digest ("+digestAlg+"): "+HexString.bufferToHex(octStr.getOctets())+"\n");
 				}							
 			}
 			
@@ -94,11 +98,15 @@ public class DeviationListParser extends DListParser{
 				
 				ASN1ObjectIdentifier id_deviationType = deviationDescription.getDeviationType();
 				
-				if (id_deviationType.equals(ICAOObjectIdentifiers.id_Deviation_CertOrKey)) {
+				if (id_deviationType == null) {
+					sw.write("\t! deviationType is missing\n");
+				} else if (id_deviationType.equals(ICAOObjectIdentifiers.id_Deviation_CertOrKey)) {
 					sw.write("\t+ Generic certificate or key related deviation without more details. (OID: "+id_deviationType+")\n");
+					writeParameters(sw, deviationDescription);
 				} 
 				else if (id_deviationType.equals(ICAOObjectIdentifiers.id_Deviation_CertOrKey_DSSignature)) {
 					sw.write("\t+ DS Signature is wrong (OID: "+id_deviationType+")\n");
+					writeParameters(sw, deviationDescription);
 				}
 				else if (id_deviationType.equals(ICAOObjectIdentifiers.id_Deviation_CertOrKey_DSEncoding) || id_deviationType.equals(ICAOObjectIdentifiers.id_Deviation_CertOrKey_CSCAEncoding)) {
 					if (id_deviationType.equals(ICAOObjectIdentifiers.id_Deviation_CertOrKey_DSEncoding)) sw.write("\t+ DS certificate contains a coding error (OID: "+id_deviationType+"): ");
@@ -117,7 +125,8 @@ public class DeviationListParser extends DListParser{
 					case 7: sw.write("deviation in certificate body field: subjectPublicKeyInfo\n"); break;
 					case 8: sw.write("deviation in certificate body field: issuerUniqueID\n"); break;
 					case 9: sw.write("deviation in certificate body field: subjectUniqueID\n"); break;
-					default: break;	
+					case -1: break; // extension, see below
+					default: sw.write("unknown certificate body field "+certField.getCertificateBodyField()+"\n"); break;
 					}
 					
 					if (certField.getExtensionOID() != null) {
@@ -126,8 +135,10 @@ public class DeviationListParser extends DListParser{
 					
 				} else if (id_deviationType.equals(ICAOObjectIdentifiers.id_Deviation_CertOrKey_AAKeyCompromised)) {
 					sw.write("\t+ Key for AA may be compromised ans should not be relied upon (OID: "+id_deviationType+")\n");
+					writeParameters(sw, deviationDescription);
 				} else if (id_deviationType.equals(ICAOObjectIdentifiers.id_Deviation_LDS)) {
 					sw.write("\t+ Generic LDS related deviation without more details. (OID: "+id_deviationType+")\n");
+					writeParameters(sw, deviationDescription);
 				} else if (id_deviationType.equals(ICAOObjectIdentifiers.id_Deviation_LDS_DGMalformed) || id_deviationType.equals(ICAOObjectIdentifiers.id_Deviation_LDS_DGHashWrong)) {
 					if (id_deviationType.equals(ICAOObjectIdentifiers.id_Deviation_LDS_DGMalformed) ) sw.write("\t+ TLV encoding of the following datagroup is corrupted (OID: "+id_deviationType+"): ");
 					else sw.write("\t+ Hash value of the following datagroup in the EF.SOD is wrong (OID: "+id_deviationType+"): ");
@@ -135,15 +146,19 @@ public class DeviationListParser extends DListParser{
 					int dg = ASN1Integer.getInstance(deviationDescription.getParameters().getLoadedObject()).getPositiveValue().intValue();
 					
 					if (dg>0 && dg <=16) sw.write("DG"+dg+"\n"); 
-					else if (dg==20) sw.write("SOD"+dg+"\n"); 
-					else if (dg==21) sw.write("COM"+dg+"\n"); 
+					else if (dg==20) sw.write("SOD\n"); 
+					else if (dg==21) sw.write("COM\n"); 
+					else sw.write("unknown data group "+dg+"\n");
 					
 				} else if (id_deviationType.equals(ICAOObjectIdentifiers.id_Deviation_LDS_SODSignatureWrong)) {
 					sw.write("\t+ Signature contained in EF.SOD is wrong (OID: "+id_deviationType+")\n");
+					writeParameters(sw, deviationDescription);
 				} else if (id_deviationType.equals(ICAOObjectIdentifiers.id_Deviation_LDS_COMInconsistent)) {
 					sw.write("\t+ EF.COM and EF.SOD are inconsistent (OID: "+id_deviationType+")\n");
+					writeParameters(sw, deviationDescription);
 				} else if (id_deviationType.equals(ICAOObjectIdentifiers.id_Deviation_MRZ)) {
 					sw.write("\t+ Generic MRZ related deviation without more details. (OID: "+id_deviationType+")\n");
+					writeParameters(sw, deviationDescription);
 				} else if (id_deviationType.equals(ICAOObjectIdentifiers.id_Deviation_MRZ_WrongCheckDigit) || id_deviationType.equals(ICAOObjectIdentifiers.id_Deviation_MRZ_WrongData)) {
 					if (id_deviationType.equals(ICAOObjectIdentifiers.id_Deviation_MRZ_WrongData)) sw.write("\t+ The following field of MRZ contains wrong data (OID: "+id_deviationType+"): ");
 					else sw.write("\t+ Check digit to the following field of the MRZ is calculated wrong (OID: "+id_deviationType+"): ");
@@ -161,19 +176,23 @@ public class DeviationListParser extends DListParser{
 					case 7: sw.write("sex\n"); break;
 					case 8: sw.write("dateOfExpiry\n"); break;
 					case 9: sw.write("optionalData\n"); break;
-					default: break;	
+					default: sw.write("unknown MRZ field "+mrzField+"\n"); break;
 					}
 					
 				} else if (id_deviationType.equals(ICAOObjectIdentifiers.id_Deviation_Chip)) {
 					sw.write("\t+ Chip is not usable (OID: "+id_deviationType+")\n");
+					writeParameters(sw, deviationDescription);
+				} else if (id_deviationType.equals(ICAOObjectIdentifiers.id_Deviation_NationalUse)) {
+					sw.write("\t+ Deviation for national use (OID: "+id_deviationType+")\n");
+					writeParameters(sw, deviationDescription);
+				} else {
+					sw.write("\t! Unknown deviation type, not defined in ICAO Doc 9303 Part 3, 7.3.5 and Part 12, 10.2 (OID: "+id_deviationType+")\n");
+					writeParameters(sw, deviationDescription);
 				}
 				
 				if (deviationDescription.getNationalUse() != null) {
-					try {
-						sw.write("\tnationalUse field contains data (RAW DATA following): \n"+HexString.bufferToHex(deviationDescription.getNationalUse().getEncoded(),true)+"\n");
-					} catch (IOException e) {
-						sw.write("\tError while decode nationalUse field.\n");
-					}
+					// not governed by ICAO, so only its ASN.1 structure can be shown
+					sw.write("\tnationalUse:\n"+dump(deviationDescription.getNationalUse().getExplicitBaseObject()));
 				}
 				
 			}
@@ -181,6 +200,46 @@ public class DeviationListParser extends DListParser{
 		}
 
 		return sw.toString();
+	}
+
+	/**
+	 * Checks the MUSTs of the DeviationList structure (ICAO Doc 9303 Part 12, 10.2) that its ASN.1 parser accepts:
+	 * the version, the mandatory deviationType and the digestAlgorithm that is needed for certificateDigest.
+	 */
+	@Override
+	public CheckResult check() {
+		StringWriter sw = new StringWriter();
+		CheckResult.Status status = CheckResult.Status.VALID;
+		if (deviationList.getVersion() != 0) {
+			sw.write("DeviationList version MUST be v0 but is v"+deviationList.getVersion()+" (ICAO Doc 9303 Part 12, 10.2)!\n");
+			status = CheckResult.Status.INVALID;
+		}
+		for (int i=0;i<deviationList.getDeviations().size();i++) {
+			Deviation deviation = Deviation.getInstance(deviationList.getDeviations().getObjectAt(i));
+			DocumentSignerIdentifier dscIdentifier = deviation.getDocuments().getDscIdentifier();
+			if (dscIdentifier != null && dscIdentifier.getTag() == DocumentSignerIdentifier.TYPE_certificateDigest && deviationList.getDigestAlg() == null) {
+				sw.write("Deviation No. "+(i+1)+" uses certificateDigest, so digestAlgorithm MUST be present in the DeviationList (ICAO Doc 9303 Part 12, 10.2)!\n");
+				status = CheckResult.Status.INVALID;
+			}
+			for (int k=0;k<deviation.getDescriptions().size();k++) {
+				if (DeviationDescription.getInstance(deviation.getDescriptions().getObjectAt(k)).getDeviationType() == null) {
+					sw.write("Deviation No. "+(i+1)+": deviationType MUST be present (ICAO Doc 9303 Part 12, 10.2)!\n");
+					status = CheckResult.Status.INVALID;
+				}
+			}
+		}
+		return new CheckResult(status, sw.toString());
+	}
+
+	/** Shows the ASN.1 structure of the parameters, for deviation types whose parameters are not decoded. */
+	private static void writeParameters(StringWriter sw, DeviationDescription deviationDescription) {
+		if (deviationDescription.getParameters() != null) {
+			sw.write("\tparameters:\n"+dump(deviationDescription.getParameters().getExplicitBaseObject()));
+		}
+	}
+
+	private static String dump(ASN1Encodable obj) {
+		return ASN1Dump.dumpAsString(obj, true).replaceAll("(?m)^", "\t\t");
 	}
 
 }

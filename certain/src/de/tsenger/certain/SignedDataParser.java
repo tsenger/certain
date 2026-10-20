@@ -3,6 +3,22 @@
  */
 package de.tsenger.certain;
 
+import java.io.IOException;
+import java.util.Arrays;
+import org.bouncycastle.asn1.ASN1Encodable;
+import org.bouncycastle.asn1.ASN1EncodableVector;
+import org.bouncycastle.asn1.ASN1Encoding;
+import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.ASN1OctetString;
+import org.bouncycastle.asn1.ASN1Primitive;
+import org.bouncycastle.asn1.cms.Attribute;
+import org.bouncycastle.asn1.cms.AttributeTable;
+import org.bouncycastle.asn1.cms.CMSAttributes;
+import org.bouncycastle.asn1.cms.Time;
+import org.bouncycastle.asn1.util.ASN1Dump;
+import org.bouncycastle.asn1.x509.BasicConstraints;
+import org.bouncycastle.asn1.x509.ExtendedKeyUsage;
+import org.bouncycastle.asn1.x509.KeyPurposeId;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.StringWriter;
@@ -49,6 +65,10 @@ import de.tsenger.tools.HexString;
  */
 public class SignedDataParser {
 	
+	/** Object identifier of the Deviation List Signer key purpose (ICAO Doc 9303 Part 12, 7.1.1.3). */
+	private static final KeyPurposeId DEVIATION_LIST_SIGNING_KEY = KeyPurposeId.getInstance(ICAOObjectIdentifiers.id_icao_DeviationListSigningKey);
+
+	private final byte[] binary;
 	private String signedContentTypeOID;
 	private ASN1Object signedDataContent;
 	private DListParser dListParser;
@@ -60,13 +80,8 @@ public class SignedDataParser {
 
 	
 	
-	private SignedDataParser() {
-		this.dListSignerCertificates = new ArrayList<Certificate>(4);	
-	}
-	
-	
 	public SignedDataParser(byte[] binary, CertSelector selector) {
-		this();		
+		this.binary = binary;
 		this.cmsSignedData = buildCMSSignedDataFromBinary(binary);		
 		this.signerInfo = parseSignerInfo();
 		this.signedDataContent = parseDList();
@@ -129,8 +144,15 @@ public class SignedDataParser {
 		StringWriter sw = new StringWriter();
 		CheckResult.Status status = CheckResult.Status.VALID;
 
-		if (cmsSignedData.getVersion() != 3)
+		sw.write("eContentType: " + signedContentTypeOID + " (" + contentTypeName() + ")\n");
+		boolean deviationList = signedContentTypeOID.equals(ICAOObjectIdentifiers.id_icao_DeviationList.getId());
+		if (deviationList) {
+			status = checkDeviationListProfile(sw);
+		} else if (cmsSignedData.getVersion() != 3) {
 			sw.write("SignedData Version SHOULD be 3 but is " + cmsSignedData.getVersion() + "!\n");
+		}
+		writeSignedAttributes(sw);
+		sw.write("\n");
 
 		sw.write("SignedData object contains " + dListSignerCertificates.size() + " Signer certificates:\n\n");
 
@@ -145,9 +167,11 @@ public class SignedDataParser {
 
 			sw.write("Subject DN: " + subjectDN + "\n");
 			sw.write("Issuer  DN:  " + issuerDN + "\n");
-			DEROctetString oct = (DEROctetString) DEROctetString.getInstance(x509Cert.getExtensionValue("2.5.29.14"));
-			SubjectKeyIdentifier skid = SubjectKeyIdentifier.getInstance(oct.getOctets());
-			sw.write("X509 SubjectKeyIdentifier: " + HexString.bufferToHex(skid.getKeyIdentifier()) + "\n");
+			if (x509Cert.getExtensionValue("2.5.29.14") != null) {
+				DEROctetString oct = (DEROctetString) DEROctetString.getInstance(x509Cert.getExtensionValue("2.5.29.14"));
+				SubjectKeyIdentifier skid = SubjectKeyIdentifier.getInstance(oct.getOctets());
+				sw.write("X509 SubjectKeyIdentifier: " + HexString.bufferToHex(skid.getKeyIdentifier()) + "\n");
+			}
 
 			if (pubKey != null) {
 				try {
@@ -168,6 +192,105 @@ public class SignedDataParser {
 		if (signature.getStatus().compareTo(status) > 0) status = signature.getStatus();
 
 		return new CheckResult(status, sw.toString());
+	}
+
+	private String contentTypeName() {
+		if (signedContentTypeOID.equals(ICAOObjectIdentifiers.id_icao_DeviationList.getId())) return "ICAO Deviation List";
+		if (signedContentTypeOID.equals(BSIObjectIdentifiers.DefectList.getId())) return "BSI Defect List";
+		return "unknown, the content is not parsed";
+	}
+
+	/** Lists the signed attributes of the SignerInfo. */
+	private void writeSignedAttributes(StringWriter sw) {
+		AttributeTable signedAttributes = signerInfo.getSignedAttributes();
+		if (signedAttributes == null) return;
+		sw.write("Signed attributes:\n");
+		ASN1EncodableVector attributes = signedAttributes.toASN1EncodableVector();
+		for (int i = 0; i < attributes.size(); i++) {
+			Attribute attribute = Attribute.getInstance(attributes.get(i));
+			ASN1ObjectIdentifier type = attribute.getAttrType();
+			ASN1Encodable value = attribute.getAttrValues().getObjectAt(0);
+			if (type.equals(CMSAttributes.contentType)) {
+				sw.write("\tcontentType: " + value + "\n");
+			} else if (type.equals(CMSAttributes.signingTime)) {
+				sw.write("\tsigningTime: " + Time.getInstance(value).getTime() + "\n");
+			} else if (type.equals(CMSAttributes.messageDigest)) {
+				sw.write("\tmessageDigest: " + HexString.bufferToHex(ASN1OctetString.getInstance(value).getOctets()) + "\n");
+			} else {
+				sw.write("\t" + type + ":\n" + ASN1Dump.dumpAsString(attribute.getAttrValues(), true).replaceAll("(?m)^", "\t\t"));
+			}
+		}
+	}
+
+	/**
+	 * Checks the SignedData profile for Deviation Lists (ICAO Doc 9303 Part 12, 10.1, Table 19) and the extended key
+	 * usage of the Deviation List Signer certificate (7.1.1.3). Violated MUSTs make the check fail, RECOMMENDED
+	 * fields are only noted.
+	 */
+	private CheckResult.Status checkDeviationListProfile(StringWriter sw) {
+		CheckResult.Status status = CheckResult.Status.VALID;
+		try {
+			if (!Arrays.equals(binary, ASN1Primitive.fromByteArray(binary).getEncoded(ASN1Encoding.DER))) {
+				sw.write("The Deviation List MUST be DER encoded but is not (ICAO Doc 9303 Part 12, 10)!\n");
+				status = CheckResult.Status.INVALID;
+			}
+		} catch (IOException e) {
+			sw.write("Couldn't check the DER encoding: " + e.getLocalizedMessage() + "\n");
+		}
+		if (cmsSignedData.getVersion() != 3) {
+			sw.write("SignedData version MUST be v3 but is v" + cmsSignedData.getVersion() + " (ICAO Doc 9303 Part 12, Table 19)!\n");
+			status = CheckResult.Status.INVALID;
+		}
+		if (!cmsSignedData.getCRLs().getMatches(null).isEmpty()) {
+			sw.write("crls MUST NOT be present (ICAO Doc 9303 Part 12, Table 19)!\n");
+			status = CheckResult.Status.INVALID;
+		}
+		int signerInfos = cmsSignedData.getSignerInfos().size();
+		if (signerInfos != 1) {
+			sw.write("Note: it is RECOMMENDED to provide only one signerInfo, but there are " + signerInfos
+					+ ", only the first one is checked (ICAO Doc 9303 Part 12, Table 19).\n");
+		}
+		if (signerInfo.getSID().getSubjectKeyIdentifier() == null) {
+			sw.write("Note: the sid of the SignerInfo is issuerAndSerialNumber, subjectKeyIdentifier is RECOMMENDED "
+					+ "(ICAO Doc 9303 Part 12, Table 19).\n");
+		}
+		AttributeTable signedAttributes = signerInfo.getSignedAttributes();
+		if (signedAttributes == null) {
+			sw.write("signedAttrs MUST be present (ICAO Doc 9303 Part 12, Table 19)!\n");
+			status = CheckResult.Status.INVALID;
+		} else {
+			if (signedAttributes.get(CMSAttributes.signingTime) == null) {
+				sw.write("signedAttrs MUST include the signing time (ICAO Doc 9303 Part 12, Table 19)!\n");
+				status = CheckResult.Status.INVALID;
+			}
+			Attribute contentType = signedAttributes.get(CMSAttributes.contentType);
+			if (contentType == null || !contentType.getAttrValues().getObjectAt(0).equals(new ASN1ObjectIdentifier(signedContentTypeOID))) {
+				sw.write("The content-type attribute MUST be present and match the eContentType (RFC 5652, 11.1)!\n");
+				status = CheckResult.Status.INVALID;
+			}
+		}
+		if (signerInfo.getUnsignedAttributes() != null) {
+			sw.write("unsignedAttrs MUST NOT be present (ICAO Doc 9303 Part 12, Table 19)!\n");
+			status = CheckResult.Status.INVALID;
+		}
+		Collection<X509CertificateHolder> signerCerts = cmsSignedData.getCertificates().getMatches(signerInfo.getSID());
+		if (!signerCerts.isEmpty()) {
+			X509CertificateHolder signerCert = signerCerts.iterator().next();
+			BasicConstraints basicConstraints = BasicConstraints.fromExtensions(signerCert.getExtensions());
+			if (basicConstraints != null && basicConstraints.isCA()) {
+				sw.write("The Deviation List is signed by a CA certificate, but Deviation Lists MUST NOT be issued directly "
+						+ "by a CSCA (ICAO Doc 9303 Part 3, 7.3.2)!\n");
+				status = CheckResult.Status.INVALID;
+			}
+			ExtendedKeyUsage eku = ExtendedKeyUsage.fromExtensions(signerCert.getExtensions());
+			if (eku == null || !eku.hasKeyPurposeId(DEVIATION_LIST_SIGNING_KEY)) {
+				sw.write("The extended key usage of the Deviation List Signer certificate MUST contain "
+						+ DEVIATION_LIST_SIGNING_KEY.getId() + " but is " + (eku == null ? "missing" : Arrays.toString(eku.getUsages()))
+						+ " (ICAO Doc 9303 Part 12, 7.1.1.3)!\n");
+				status = CheckResult.Status.INVALID;
+			}
+		}
+		return status;
 	}
 
 

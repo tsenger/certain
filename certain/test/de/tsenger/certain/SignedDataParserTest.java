@@ -4,11 +4,12 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import java.math.BigInteger;
+import static de.tsenger.certain.TestSignedData.SERIAL;
+import static de.tsenger.certain.TestSignedData.SIGNER;
+import static de.tsenger.certain.TestSignedData.certificate;
+import static de.tsenger.certain.TestSignedData.keyPair;
+
 import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.Security;
-import java.util.Date;
 
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1Enumerated;
@@ -20,18 +21,7 @@ import org.bouncycastle.asn1.DERSet;
 import org.bouncycastle.asn1.DERTaggedObject;
 import org.bouncycastle.asn1.DERUTF8String;
 import org.bouncycastle.asn1.cms.IssuerAndSerialNumber;
-import org.bouncycastle.asn1.x500.X500Name;
-import org.bouncycastle.asn1.x509.Extension;
-import org.bouncycastle.asn1.x509.SubjectKeyIdentifier;
 import org.bouncycastle.cert.X509CertificateHolder;
-import org.bouncycastle.cert.jcajce.JcaX509ExtensionUtils;
-import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
-import org.bouncycastle.cms.CMSProcessableByteArray;
-import org.bouncycastle.cms.CMSSignedDataGenerator;
-import org.bouncycastle.cms.jcajce.JcaSignerInfoGeneratorBuilder;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
-import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
 import org.junit.Test;
 
 import de.tsenger.certain.asn1.eac.BSIObjectIdentifiers;
@@ -41,15 +31,6 @@ import de.tsenger.certain.asn1.eac.BSIObjectIdentifiers;
  * chapter 8) with SignedData objects created by the test.
  */
 public class SignedDataParserTest {
-
-	/** Several RDNs, so that a different order of the RDNs makes a difference. */
-	private static final X500Name SIGNER = new X500Name("C=DE,O=Test,OU=Lists,CN=DFL Signer");
-	/** Larger than 127, so that boxed Integers are not cached. */
-	private static final BigInteger SERIAL = BigInteger.valueOf(4711);
-
-	static {
-		Security.addProvider(new BouncyCastleProvider());
-	}
 
 	@Test
 	public void signatureWithIssuerAndSerialNumberIsValid() throws Exception {
@@ -94,7 +75,7 @@ public class SignedDataParserTest {
 		String output = defectListOutput(defectList(knownDefect));
 
 		assertTrue(output, output.contains("Replacement Certificate:"));
-		assertTrue(output, output.contains("CN=DFL Signer"));
+		assertTrue(output, output.contains("CN=List Signer"));
 	}
 
 	@Test
@@ -142,34 +123,6 @@ public class SignedDataParserTest {
 	}
 
 	private static byte[] sign(byte[] defectList, KeyPair keyPair, X509CertificateHolder cert, boolean subjectKeyIdentifier) throws Exception {
-		JcaSignerInfoGeneratorBuilder builder = new JcaSignerInfoGeneratorBuilder(
-				new JcaDigestCalculatorProviderBuilder().setProvider("BC").build());
-		CMSSignedDataGenerator generator = new CMSSignedDataGenerator();
-		if (subjectKeyIdentifier) {
-			byte[] ski = SubjectKeyIdentifier.fromExtensions(cert.getExtensions()).getKeyIdentifier();
-			generator.addSignerInfoGenerator(builder.build(signer(keyPair), ski));
-		} else {
-			generator.addSignerInfoGenerator(builder.build(signer(keyPair), cert));
-		}
-		generator.addCertificate(cert);
-		return generator.generate(new CMSProcessableByteArray(BSIObjectIdentifiers.DefectList, defectList), true).getEncoded();
-	}
-
-	private static org.bouncycastle.operator.ContentSigner signer(KeyPair keyPair) throws Exception {
-		return new JcaContentSignerBuilder("SHA256withECDSA").setProvider("BC").build(keyPair.getPrivate());
-	}
-
-	/** Self-signed certificate with the subject {@link #SIGNER} and the serial number {@link #SERIAL}. */
-	private static X509CertificateHolder certificate(KeyPair keyPair) throws Exception {
-		JcaX509v3CertificateBuilder builder = new JcaX509v3CertificateBuilder(SIGNER, SERIAL, new Date(),
-				new Date(System.currentTimeMillis() + 86400000L), SIGNER, keyPair.getPublic());
-		builder.addExtension(Extension.subjectKeyIdentifier, false, new JcaX509ExtensionUtils().createSubjectKeyIdentifier(keyPair.getPublic()));
-		return builder.build(signer(keyPair));
-	}
-
-	private static KeyPair keyPair() throws Exception {
-		KeyPairGenerator generator = KeyPairGenerator.getInstance("EC", "BC");
-		generator.initialize(256);
-		return generator.generateKeyPair();
+		return TestSignedData.sign(BSIObjectIdentifiers.DefectList, defectList, keyPair, cert, subjectKeyIdentifier);
 	}
 }

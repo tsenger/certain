@@ -354,7 +354,10 @@ public class CertainMain {
 	private void printDListInfo() {
 		print(sdParser.checkSignedData());
 		DListParser dlParser = sdParser.getDListParser();
-		if (dlParser != null) System.out.println(dlParser.getDListInfoString(showDetails));
+		if (dlParser != null) {
+			System.out.println(dlParser.getDListInfoString(showDetails));
+			print(dlParser.check());
+		}
 	}
 
 	/** Notes an expired certificate; this does not affect the exit code, certain is not a chip with a current date. */
