@@ -2,3 +2,5 @@
 /Example_Certs/
 /ext-src/
 /target/
+/dependency-reduced-pom.xml
+/testdata/

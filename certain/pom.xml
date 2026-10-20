@@ -8,6 +8,7 @@
 	<description>certain is a command line CV certificate parser written in Java. It parses card verifiable certificates as specified in BSI TR-03110 and verifies the contained signatures. </description>
 	<build>
 		<sourceDirectory>src</sourceDirectory>
+		<testSourceDirectory>test</testSourceDirectory>
 		<resources>
 			<resource>
 				<directory>src</directory>
@@ -18,11 +19,14 @@
 		</resources>
 		<plugins>
 			<plugin>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>3.5.4</version>
+			</plugin>
+			<plugin>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.5.1</version>
+				<version>3.14.1</version>
 				<configuration>
-					<source>1.7</source>
-					<target>1.7</target>
+					<release>8</release>
 				</configuration>
 			</plugin>
 			
@@ -30,7 +34,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-shade-plugin</artifactId>
-				<version>3.2.3</version>
+				<version>3.6.2</version>
 				<executions>
 					<!-- Run shade goal on package phase -->
 					<execution>
@@ -50,7 +54,7 @@
 									</excludes>
 								</filter>
 								<filter>
-									<artifact>org.bouncycastle:bcprov-jdk15to18</artifact>
+									<artifact>org.bouncycastle:bcprov-jdk18on</artifact>
 									<excludeDefaults>false</excludeDefaults>
 									<includes>
 										<include>org/bouncycastle/jcajce/provider/asymmetric/**</include>
@@ -73,18 +77,24 @@
 	<dependencies>
 		<dependency>
 			<groupId>org.bouncycastle</groupId>
-			<artifactId>bcprov-jdk15to18</artifactId>
+			<artifactId>bcprov-jdk18on</artifactId>
 			<version>1.74</version>
 		</dependency>
 		<dependency>
 			<groupId>org.bouncycastle</groupId>
-			<artifactId>bcpkix-jdk15to18</artifactId>
+			<artifactId>bcpkix-jdk18on</artifactId>
 			<version>1.74</version>
 		</dependency>
 		<dependency>
 			<groupId>com.beust</groupId>
 			<artifactId>jcommander</artifactId>
 			<version>1.81</version>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.13.2</version>
+			<scope>test</scope>
 		</dependency>
 	</dependencies>
 </project>
