@@ -56,7 +56,7 @@ public class CertainMain {
 	private static final String VERSION = readVersion();
 
 	private static final String BANNER = "certain " + VERSION + " - parses and verifies CV certificates (BSI TR-03110), "
-			+ "master lists and deviation/defect lists";
+			+ "master, signer, deviation, defect and block lists (ICAO Doc 9303, BSI TR-03129)";
 
 	@Parameter(names = {"--cert","-c"}, variableArity = true, description = "CVCA, DV or terminal certificate files (e.g. -c <file1> [<file2> ...])")
 	private List<String> certFileNames;
@@ -79,7 +79,8 @@ public class CertainMain {
 	@Parameter(names = {"--version", "-V"}, description = "Show the version and exit")
 	private boolean version;
 
-	@Parameter(names = {"--details", "-d"}, description = "Show more details (full public key values and signature bytes) on the certificates and requests")
+	@Parameter(names = {"--details", "-d"}, description = "Show more details: full public key values and signature bytes of CV certificates and requests, "
+			+ "the X.509 certificates of master and signer lists, replacement certificates of defect lists and the IDs of block lists")
 	private boolean showDetails = false;
 
 	@Parameter(names = {"--fingerprint", "-f"}, description = "Show MD5, SHA-1, SHA-224 and SHA-256 fingerprints of certificates and requests")
