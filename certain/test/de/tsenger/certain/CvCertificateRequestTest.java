@@ -1,6 +1,7 @@
 package de.tsenger.certain;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 import org.junit.Test;
 
@@ -13,10 +14,12 @@ public class CvCertificateRequestTest {
 
 	@Test
 	public void requestWithoutOuterSignature() throws Exception {
-		CVCertificateRequest req = TestData.request("requests/cze_cert3.cvreq");
+		CVCertificateRequest req = CVCertificateRequest.getInstance(
+				TestCertificates.rsaRequest(TestCertificates.rsaKeyPair(), null, null));
 
-		assertEquals("CZCVCACZ001", req.getCertificateBody().getCarString());
-		assertEquals("CZCVCACZ002", req.getCertificateBody().getChrString());
+		assertEquals("DETEST00001", req.getCertificateBody().getCarString());
+		assertEquals("DETEST00002", req.getCertificateBody().getChrString());
+		assertFalse(req.hasOuterSignature());
 	}
 
 	@Test

@@ -20,6 +20,7 @@ import de.tsenger.tools.FileSystem;
  * <li>{@code dev/<AT|IS|ST>/}: self-made chain {@code cvca.cvcert} -> {@code dv.cvcert} -> {@code ta.cvcert}</li>
  * <li>{@code de-test/<eid|epass|esign>/}: German test CVCAs ({@code cvca.cv}) and DV certificates</li>
  * <li>{@code it/}: Italian CVCA certificates</li>
+ * <li>{@code cz/}: Czech CVCA link certificate {@code cze_cert3.cvcert} (CZCVCACZ001 -> CZCVCACZ002, without CZCVCACZ001)</li>
  * <li>{@code requests/}: DV certificate requests</li>
  * <li>{@code master-lists/}: ICAO CSCA master lists ({@code de.ml}: German master list of 2026-10-01)</li>
  * <li>{@code deviation-lists/}: ICAO deviation lists ({@code cms/} signed, {@code raw/} unsigned)</li>
