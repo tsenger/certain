@@ -20,6 +20,7 @@ Run from `certain/`:
 
 - Run tests: `mvn test` (single class: `mvn test -Dtest=CvCertificateChainTest`). JUnit 4 tests live in `test/` (`testSourceDirectory`), not `src/test`.
 - Tests use local, untracked test data in `certain/testdata/` (gitignored; the layout is documented in `TestData.java`). If it is missing, the tests are skipped, not failed. A raw, unsorted copy of the data is in `~/cv-certs`.
+- `CliOutputTest` compares the CLI output for all test data with golden files in `certain/testdata/golden/`. Refresh them only from a known-good state: `mvn test -Dtest=CliOutputTest -Dgolden.update=true`.
 - Known bugs are kept as `@Ignore`d tests with the reason in the annotation.
 
 There is no lint configuration.

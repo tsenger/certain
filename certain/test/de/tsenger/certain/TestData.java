@@ -29,7 +29,7 @@ import de.tsenger.tools.FileSystem;
  */
 final class TestData {
 
-	private static final File ROOT = new File("testdata");
+	static final File ROOT = new File("testdata");
 
 	static {
 		Security.addProvider(new BouncyCastleProvider());
