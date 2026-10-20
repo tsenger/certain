@@ -36,7 +36,7 @@ There is no lint configuration.
 - `de.tsenger.certain.asn1.eac`: only what Bouncy Castle (`org.bouncycastle.asn1.eac`, in `bcutil`) cannot do: CV certificates and requests with certificate extensions (`CertificateExtensions`, `DiscretionaryDataTemplate`), the 40-bit CHAT of authentication terminals (`CertificateHolderAuthorization`), the outer CAR of requests, and the full BSI OID list. Reference, date and public key types come from Bouncy Castle. `ApplicationObjects` reads and creates the APPLICATION tagged data objects (`ASN1TaggedObject`), `References` builds Bouncy Castle references and dates from raw contents.
 - `de.tsenger.certain.asn1.icao` and `asn1.mrtdpki`: ASN.1 structures for deviation lists and defect lists.
 - `de.tsenger.tools`: small utilities (hex, file, conversion).
-- Dependencies: BouncyCastle 1.86 (`bcprov`, `bcpkix`, `bcutil`, all jdk18on) and JCommander. The shade config uses `minimizeJar`, which drops classes not statically reachable; BC's `jcajce/provider/asymmetric/**` is force-kept via a filter because it is loaded reflectively, so other reflectively loaded classes may need adding to that filter in `pom.xml`.
+- Dependencies: BouncyCastle 1.86 (`bcprov`, `bcpkix`, `bcutil`, all jdk18on) and JCommander. The shade config uses `minimizeJar`, which drops classes not statically reachable; BC's `jcajce/provider/asymmetric/**` and `jcajce/provider/digest/**` are force-kept via a filter because they are loaded reflectively (without the digests the CMS signature verification of the lists fails in the fat jar only), so other reflectively loaded classes may need adding to that filter in `pom.xml`.
 
 ## Domain notes (BSI TR-03110, verified against the PDFs)
 

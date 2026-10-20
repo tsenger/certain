@@ -17,6 +17,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509CertSelector;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
@@ -30,7 +31,9 @@ import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
 import org.bouncycastle.cms.CMSException;
 import org.bouncycastle.cms.CMSProcessableByteArray;
 import org.bouncycastle.cms.CMSSignedData;
+import org.bouncycastle.cms.CMSSignerDigestMismatchException;
 import org.bouncycastle.cms.SignerInformation;
+import org.bouncycastle.cms.jcajce.JcaSimpleSignerInfoVerifierBuilder;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.util.Store;
 
@@ -82,22 +85,30 @@ public class SignedDataParser {
 		return dListSignerCertificates;
 	}
 	
-	public boolean verifySignedData() {
-		boolean result = false;
-		for (Certificate cert : dListSignerCertificates) {			
-			X509Certificate x509Cert = (X509Certificate) cert;
-			
-			if (x509Cert.getSubjectDN().toString().equals(x509Cert.getIssuerDN().toString())) {
-				SignedDataVerifier verifier = new SignedDataVerifier(x509Cert);
-				try {
-					result = verifier.signatureVerified(cmsSignedData);
-				} catch (CertificateException | OperatorCreationException | CMSException e) {
-					System.err.println("Verify failed: "+e.getMessage());
-				}				
-			}				
+	/**
+	 * Verifies the signature of the SignedData object with the signer certificate its SignerInfo refers to, by
+	 * issuerAndSerialNumber or subjectKeyIdentifier. This needs only the signer certificate, not its issuer.
+	 */
+	public CheckResult verifySignedData() {
+		Collection<X509CertificateHolder> signerCerts = cmsSignedData.getCertificates().getMatches(signerInfo.getSID());
+		if (signerCerts.isEmpty()) {
+			return new CheckResult(CheckResult.Status.NOT_CHECKED, "SignedData signature couldn't be verified because the "
+					+ "SignedData object doesn't contain the signer certificate its SignerInfo refers to!\n");
 		}
-		return result;
-	}	
+		try {
+			if (signerInfo.verify(new JcaSimpleSignerInfoVerifierBuilder().setProvider("BC").build(signerCerts.iterator().next()))) {
+				return new CheckResult(CheckResult.Status.VALID, "Signature of SignedData object is VALID\n");
+			}
+			return new CheckResult(CheckResult.Status.INVALID, "Signature of SignedData object is !!! INVALID !!!\n");
+		} catch (CMSSignerDigestMismatchException e) {
+			return new CheckResult(CheckResult.Status.INVALID, "Signature of SignedData object is !!! INVALID !!!: "
+					+ e.getLocalizedMessage() + "\n");
+		} catch (CertificateException | OperatorCreationException | CMSException e) {
+			// e.g. an unsupported algorithm
+			return new CheckResult(CheckResult.Status.NOT_CHECKED, "SignedData signature couldn't be verified: "
+					+ e.getLocalizedMessage() + "\n");
+		}
+	}
 
 
 	public ASN1Object getContent() {
@@ -149,16 +160,12 @@ public class SignedDataParser {
 				}
 			} else {
 				sw.write("Couldn't verify signature because of missing issuer certificate!\n\n");
-			}			
+				if (status == CheckResult.Status.VALID) status = CheckResult.Status.NOT_CHECKED;
+			}
 		}
-		if (pubKey != null) {
-			boolean valid = verifySignedData();
-			sw.write("Signature of SignedData object is "+(valid?"VALID":"!!! INVALID !!!")+"\n");
-			if (!valid) status = CheckResult.Status.INVALID;
-		} else {
-			sw.write("SignedData signature couldn't be verified because of missing issuer certificate!\n");
-			status = CheckResult.Status.NOT_CHECKED;
-		}
+		CheckResult signature = verifySignedData();
+		sw.write(signature.getText());
+		if (signature.getStatus().compareTo(status) > 0) status = signature.getStatus();
 
 		return new CheckResult(status, sw.toString());
 	}

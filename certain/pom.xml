@@ -67,6 +67,7 @@
 									<excludeDefaults>false</excludeDefaults>
 									<includes>
 										<include>org/bouncycastle/jcajce/provider/asymmetric/**</include>
+										<include>org/bouncycastle/jcajce/provider/digest/**</include>
 									</includes>
 								</filter>
 							</filters>
