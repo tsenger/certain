@@ -19,7 +19,8 @@ Run from `certain/`:
 - Run: `java -jar target/certain-1.0.0.jar -c <cert files...>` (see README for options: `-r` DV request, `-l` link cert, `-ml` master list, `-dl` deviation/defect list, `-d` details, `-f` fingerprints)
 - Run tests: `mvn test` (single class: `mvn test -Dtest=CvCertificateChainTest`). JUnit 4 tests live in `test/` (`testSourceDirectory`), not `src/test`.
 - Most tests use local, untracked test data in `certain/testdata/` (gitignored; the layout is documented in `TestData.java`). If it is missing, they are skipped, not failed. A raw, unsorted copy of the data is in `~/cv-certs`. `RsaSignatureTest` (creates its own certificates) and `AuthorizationTextTest` need no test data.
-- `CliOutputTest` compares the CLI output for all test data with golden files in `certain/testdata/golden/`. Refresh them only from a known-good state: `mvn test -Dtest=CliOutputTest -Dgolden.update=true`.
+- `CliOutputTest` compares the CLI output (stdout, stderr and exit code) for all test data with golden files in `certain/testdata/golden/`. Refresh them only from a known-good state: `mvn test -Dtest=CliOutputTest -Dgolden.update=true`.
+- `CertainMainTest` (exit codes) and `CvCheckerTest` create their certificates and requests with `TestCertificates` and need no test data.
 - Known bugs are kept as `@Ignore`d tests with the reason in the annotation (currently there are none).
 - The golden files are generated with the test classpath. The fat jar can differ (e.g. `SHA1withRSA` instead of `SHA1WITHRSA` in the master list output) because `minimizeJar` changes which provider creates the certificates; this was already the case before the Bouncy Castle 1.86 update.
 
@@ -28,7 +29,8 @@ There is no lint configuration.
 ## Architecture
 
 - Non-standard Maven layout: `sourceDirectory` is `src` (not `src/main/java`); non-`.java` files under `src` are packaged as resources. Compiled with `<release>8</release>`.
-- `CertainMain` (JCommander CLI) is the entry point: registers the BouncyCastle provider, then dispatches to parsers depending on the options given.
+- `CertainMain` (JCommander CLI) is the entry point: `run(args)` returns the exit code (0 all checks passed, 1 a check failed, 2 wrong usage or unreadable input file, 3 a check could not be done; 1 > 2 > 3 if several apply), `main` only calls `System.exit`. It reads the files given by the options, prints their contents to stdout (errors and the banner to stderr) and the results of the checks. The version comes from the Maven filtered resource `version.properties`.
+- `CvChecker` does the checks of CV certificates, link certificates and requests against a `CertStorage` and returns `CheckResult`s (status and text); `SignedDataParser.checkSignedData()` does the same for deviation/defect lists. ECDSA keys without domain parameters get them from the CVCA of the chain; for requests, well-known curves are tried if the CVCA is missing.
 - `de.tsenger.certain`: parsers (`CertParser`, `MasterListParser`, `SignedDataParser`, `DeviationListParser`, `DefectListParser`, `DListParser`), verification (`CertVerifier`, `SignedDataVerifier`, `CVSigner`), `CertStorage` (holds parsed certs for chain verification), and helpers (`HashCalculator`, `CountryCode`).
 - `de.tsenger.certain.asn1.eac`: only what Bouncy Castle (`org.bouncycastle.asn1.eac`, in `bcutil`) cannot do: CV certificates and requests with certificate extensions (`CertificateExtensions`, `DiscretionaryDataTemplate`), the 40-bit CHAT of authentication terminals (`CertificateHolderAuthorization`), the outer CAR of requests, and the full BSI OID list. Reference, date and public key types come from Bouncy Castle. `ApplicationObjects` reads and creates the APPLICATION tagged data objects (`ASN1TaggedObject`), `References` builds Bouncy Castle references and dates from raw contents.
 - `de.tsenger.certain.asn1.icao` and `asn1.mrtdpki`: ASN.1 structures for deviation lists and defect lists.

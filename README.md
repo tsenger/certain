@@ -5,28 +5,36 @@ certain is a command line CV certificate parser written in Java. It parses card 
 Usage: certain [options]
   Options:
     --cert, -c
-       CVCA or DV certificate input files. Parameter can receive multiply
-       values. (e.g. -cert <file1> [<file2> [<file3>] ... ]
+      CVCA, DV or terminal certificate files (e.g. -c &lt;file1&gt; [&lt;file2&gt; ...])
     --details, -d
-       Show more details (full publickey values and signature bytes) on the
-       certificates and requests.
-       Default: false
+      Show more details (full public key values and signature bytes) on the
+      certificates and requests
+      Default: false
     --dlist, -dl
-       shows all defects in the given Deviation/Defect List
+      Deviation List or Defect List file, shows all deviations or defects
     --dvreq, -r
-       DV request input file
+      DV certificate request file
     --fingerprint, -f
-       Show MD5, SHA1, SHA224 and SHA256 printerprint for certificates and
-       requests.
-       Default: false
+      Show MD5, SHA-1, SHA-224 and SHA-256 fingerprints of certificates and
+      requests
+      Default: false
     --help, -h
-       need help?
-       Default: false
+      Show this help and exit
     --linkcert, -l
-       Link certificate input file to new CVCA
+      Link certificate file (to a new CVCA)
     --masterlist, -ml
-       CVCA Master List
+      ICAO CSCA Master List file
+    --version, -V
+      Show the version and exit
+      Default: false
+  Exit codes:
+    0  every check passed
+    1  at least one check failed (e.g. an invalid signature)
+    2  wrong usage, or an input file could not be read or parsed
+    3  at least one check could not be done (e.g. missing issuer certificate)
 </code></pre>
+
+The contents and the results of the checks are written to stdout, error messages to stderr. The exit code summarizes the checks, so that certain can be used in scripts: `0` if every check passed, `1` if a check failed (e.g. an invalid signature), `2` on wrong usage or if an input file could not be read or parsed, and `3` if a check could not be done (e.g. because the issuer certificate was not given). If several apply, `1` takes precedence over `2`, and `2` over `3`.
 
 ## Download
 Get latest version here
