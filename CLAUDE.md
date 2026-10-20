@@ -27,10 +27,10 @@ There is no lint configuration.
 
 ## Architecture
 
-- Non-standard Maven layout: `sourceDirectory` is `src` (not `src/main/java`); non-`.java` files under `src` are packaged as resources. Compiler source/target is Java 1.8 via `<release>8</release>`.
+- Non-standard Maven layout: `sourceDirectory` is `src` (not `src/main/java`); non-`.java` files under `src` are packaged as resources. Compiled with `<release>8</release>`.
 - `CertainMain` (JCommander CLI) is the entry point: registers the BouncyCastle provider, then dispatches to parsers depending on the options given.
 - `de.tsenger.certain`: parsers (`CertParser`, `MasterListParser`, `SignedDataParser`, `DeviationListParser`, `DefectListParser`, `DListParser`), verification (`CertVerifier`, `SignedDataVerifier`, `CVSigner`), `CertStorage` (holds parsed certs for chain verification), and helpers (`HashCalculator`, `CountryCode`).
-- `de.tsenger.certain.asn1.eac`: custom BouncyCastle-style ASN.1 classes for CV certificates, requests, CHAT, public key data objects and EAC OIDs/tags (including CHAT bit flags).
+- `de.tsenger.certain.asn1.eac`: only what Bouncy Castle (`org.bouncycastle.asn1.eac`, in `bcutil`) cannot do: CV certificates and requests with certificate extensions (`CertificateExtensions`, `DiscretionaryDataTemplate`), the 40-bit CHAT of authentication terminals (`CertificateHolderAuthorization`), the outer CAR of requests, and the full BSI OID list. Reference, date and public key types come from Bouncy Castle. `ApplicationObjects` reads and creates the APPLICATION tagged data objects (`ASN1TaggedObject`), `References` builds Bouncy Castle references and dates from raw contents.
 - `de.tsenger.certain.asn1.icao` and `asn1.mrtdpki`: ASN.1 structures for deviation lists and defect lists.
 - `de.tsenger.tools`: small utilities (hex, file, conversion).
 - Dependencies: BouncyCastle (`bcprov`/`bcpkix` jdk18on) and JCommander. The shade config uses `minimizeJar`, which drops classes not statically reachable; BC's `jcajce/provider/asymmetric/**` is force-kept via a filter because it is loaded reflectively, so other reflectively loaded classes may need adding to that filter in `pom.xml`.
