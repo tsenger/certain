@@ -92,8 +92,8 @@ public class CliOutputTest {
 		try {
 			CertainMain.main(args);
 		} catch (Throwable t) {
-			// Only class and message: stack traces contain line numbers that change with every edit.
-			capture.println("EXCEPTION " + t.getClass().getName() + ": " + t.getMessage());
+			// Only the type: messages and stack traces contain class names and line numbers that change with refactorings.
+			capture.println("EXCEPTION " + t.getClass().getName());
 		} finally {
 			System.setOut(originalOut);
 			System.setErr(originalErr);
