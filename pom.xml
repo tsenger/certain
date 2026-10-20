@@ -8,19 +8,10 @@
 	<description>certain is a command line CV certificate parser written in Java. It parses card verifiable certificates as specified in BSI TR-03110 and verifies the contained signatures. </description>
 	<build>
 		<resources>
-			<resource>
-				<directory>src/main/resources</directory>
-				<excludes>
-					<exclude>**/version.properties</exclude>
-				</excludes>
-			</resource>
 			<!-- version.properties holds the version printed by the version option of certain -->
 			<resource>
 				<directory>src/main/resources</directory>
 				<filtering>true</filtering>
-				<includes>
-					<include>**/version.properties</include>
-				</includes>
 			</resource>
 		</resources>
 		<plugins>
