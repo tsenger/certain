@@ -23,7 +23,7 @@ import de.tsenger.tools.FileSystem;
  * <li>{@code requests/}: DV certificate requests</li>
  * <li>{@code master-lists/}: ICAO CSCA master lists ({@code de.ml}: German master list of 2026-10-01)</li>
  * <li>{@code deviation-lists/}: ICAO deviation lists ({@code cms/} signed, {@code raw/} unsigned)</li>
- * <li>{@code rsa/}: certificates with RSA keys</li>
+ * <li>{@code iso18013/}: certificates of ISO/IEC 18013 (EC keys with other object identifiers), not supported</li>
  * </ul>
  * Tests using this class are skipped (not failed) if the data is not available.
  */

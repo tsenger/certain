@@ -3,8 +3,9 @@ package de.tsenger.certain;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
-import org.junit.Ignore;
+import org.bouncycastle.asn1.ASN1ParsingException;
 import org.junit.Test;
 
 import de.tsenger.certain.asn1.eac.CVCertificate;
@@ -101,10 +102,13 @@ public class CvCertificateChainTest {
 		}
 	}
 
-	@Ignore("Known bug: RSA public keys in rsa/ fail with 'not an Iso7816RSAPublicKeyStructure'")
 	@Test
-	public void rsaCertificatesCanBeParsed() throws Exception {
-		TestData.certificate("rsa/root_idl.cvcert");
-		TestData.certificate("rsa/ta_idl.cvcert");
+	public void unsupportedPublicKeyAlgorithmIsReportedWithItsObjectIdentifier() throws Exception {
+		try {
+			TestData.certificate("iso18013/root_idl.cvcert");
+			fail("ASN1ParsingException expected");
+		} catch (ASN1ParsingException e) {
+			assertTrue(e.getMessage(), e.getMessage().contains("unsupported public key algorithm 1.0.18013.3.1.32"));
+		}
 	}
 }

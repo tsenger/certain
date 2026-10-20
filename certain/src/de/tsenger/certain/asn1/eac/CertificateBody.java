@@ -7,11 +7,14 @@ import java.io.IOException;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1EncodableVector;
 import org.bouncycastle.asn1.ASN1Object;
+import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Primitive;
+import org.bouncycastle.asn1.ASN1Sequence;
 import org.bouncycastle.asn1.ASN1TaggedObject;
 import org.bouncycastle.asn1.BERTags;
 import org.bouncycastle.asn1.eac.CertificateHolderReference;
 import org.bouncycastle.asn1.eac.CertificationAuthorityReference;
+import org.bouncycastle.asn1.eac.EACObjectIdentifiers;
 import org.bouncycastle.asn1.eac.PackedDate;
 import org.bouncycastle.asn1.eac.PublicKeyDataObject;
 
@@ -98,7 +101,7 @@ public class CertificateBody  extends ASN1Object
                 setCertificationAuthorityReference(aSpe);
                 break;
             case EACTags.PUBLIC_KEY:
-                setPublicKey(PublicKeyDataObject.getInstance(ApplicationObjects.children(aSpe)));
+                setPublicKey(parsePublicKey(ApplicationObjects.children(aSpe)));
                 break;
             case EACTags.CERTIFICATE_HOLDER_REFERENCE:
                 setCertificateHolderReference(aSpe);
@@ -165,6 +168,23 @@ public class CertificateBody  extends ASN1Object
         throws IOException
     {
         setIso7816CertificateBody(tagged);
+    }
+
+    /**
+     * Bouncy Castle reads every key that is not an ECDSA key as an RSA key and fails with an
+     * unspecific message, so the algorithm is checked first.
+     *
+     * @throws IOException if the algorithm is neither ECDSA nor RSA Terminal Authentication
+     */
+    private static PublicKeyDataObject parsePublicKey(ASN1Sequence key)
+        throws IOException
+    {
+        ASN1ObjectIdentifier usage = ASN1ObjectIdentifier.getInstance(key.getObjectAt(0));
+        if (!usage.on(EACObjectIdentifiers.id_TA_ECDSA) && !usage.on(EACObjectIdentifiers.id_TA_RSA))
+        {
+            throw new IOException("unsupported public key algorithm " + usage);
+        }
+        return PublicKeyDataObject.getInstance(key);
     }
 
     /**
