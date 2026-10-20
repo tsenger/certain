@@ -46,9 +46,8 @@ Since version 2.0.0 the options `-c`, `-r`, `-l`, `-ml` and `-dl` of version 1 a
 Get the latest release here: https://github.com/tsenger/certain/releases/
 
 ## Build
-certain needs Java 8 or newer and Maven. The Maven project is in the subdirectory `certain/`:
+certain needs Java 8 or newer and Maven:
 <pre><code>
-cd certain
 mvn package
 java -jar target/certain-2.0.0.jar &lt;files...&gt;
 </code></pre>

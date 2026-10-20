@@ -7,3 +7,11 @@
 
 # OS
 .DS_Store
+
+# Build output and local data
+/bin
+/Example_Certs/
+/ext-src/
+/target/
+/dependency-reduced-pom.xml
+/testdata/

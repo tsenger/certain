@@ -10,17 +10,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-`certain` is a command line parser/verifier (Java) for card verifiable (CV) certificates per BSI TR-03110, plus signed lists: ICAO CSCA master lists and deviation lists (ICAO Doc 9303 Part 12), BSI defect lists and signer lists (BSI TR-03129-2) and block lists (BSI TR-03129-3). The Maven project lives in the `certain/` subdirectory (not the repo root). The default branch is `main`.
+`certain` is a command line parser/verifier (Java) for card verifiable (CV) certificates per BSI TR-03110, plus signed lists: ICAO CSCA master lists and deviation lists (ICAO Doc 9303 Part 12), BSI defect lists and signer lists (BSI TR-03129-2) and block lists (BSI TR-03129-3). The Maven project is in the repo root (standard Maven layout). The default branch is `main`.
 
 ## Commands
 
-Run from `certain/`:
+Run from the repo root:
 
 - Build fat jar: `mvn package` (Shade plugin, `minimizeJar` on; output `target/certain-2.0.0.jar`, main class `de.tsenger.certain.CertainMain`)
 - Run: `java -jar target/certain-2.0.0.jar [-d] [-f] <files...>` (`-d` details, `-f` fingerprints; the file type is detected from the content). The options `-c`, `-r`, `-l`, `-ml`, `-dl` of 1.x are hidden and deprecated since 2.0.0 (their files are treated like the arguments, with a note on stderr); remove them in the next major version.
-- Run tests: `mvn test` (single class: `mvn test -Dtest=CvCertificateChainTest`). JUnit 4 tests live in `test/` (`testSourceDirectory`), not `src/test`.
-- Most tests use local, untracked test data in `certain/testdata/` (gitignored; the layout is documented in `TestData.java`). If it is missing, they are skipped, not failed. A raw, unsorted copy of the data is in `~/cv-certs`. `RsaSignatureTest` (creates its own certificates) and `AuthorizationTextTest` need no test data.
-- `CliOutputTest` compares the CLI output (stdout, stderr and exit code) for all test data with golden files in `certain/testdata/golden/`, as of a fixed date (`CertainMain.run(LocalDate, args)`) so that the expiration notes do not change over time. Refresh them only from a known-good state: `mvn test -Dtest=CliOutputTest -Dgolden.update=true`.
+- Run tests: `mvn test` (single class: `mvn test -Dtest=CvCertificateChainTest`). JUnit 4 tests live in `src/test/java`.
+- Most tests use local, untracked test data in `testdata/` (gitignored; the layout is documented in `TestData.java`). If it is missing, they are skipped, not failed. A raw, unsorted copy of the data is in `~/cv-certs`. `RsaSignatureTest` (creates its own certificates) and `AuthorizationTextTest` need no test data.
+- `CliOutputTest` compares the CLI output (stdout, stderr and exit code) for all test data with golden files in `testdata/golden/`, as of a fixed date (`CertainMain.run(LocalDate, args)`) so that the expiration notes do not change over time. Refresh them only from a known-good state: `mvn test -Dtest=CliOutputTest -Dgolden.update=true`.
 - `CertainMainTest` (exit codes) and `CvCheckerTest` create their certificates and requests with `TestCertificates` and need no test data.
 - Known bugs are kept as `@Ignore`d tests with the reason in the annotation (currently one in `CvCheckerTest`: EC domain parameters without the optional cofactor, not supported on purpose because Bouncy Castle rejects them and no known certificate lacks the cofactor; certain reports such a key as unsupported).
 - The golden files are generated with the test classpath. The fat jar can differ (e.g. `SHA1withRSA` instead of `SHA1WITHRSA` in the master list output) because `minimizeJar` changes which provider creates the certificates; this was already the case before the Bouncy Castle 1.86 update.
@@ -29,7 +29,7 @@ There is no lint configuration.
 
 ## Architecture
 
-- Non-standard Maven layout: `sourceDirectory` is `src` (not `src/main/java`); non-`.java` files under `src` are packaged as resources. Compiled with `<release>8</release>`.
+- Standard Maven layout (`src/main/java`, `src/main/resources`, `src/test/java`); `version.properties` in `src/main/resources` is filtered. Compiled with `<release>8</release>`.
 - `CertainMain` (JCommander CLI) is the entry point: `run(args)` returns the exit code (0 all checks passed, 1 a check failed, 2 wrong usage or unreadable or unrecognized input file, 3 a check could not be done; 1 > 2 > 3 if several apply), `main` only calls `System.exit`. It reads all files first and detects their type from the content (first byte `30` CMS SignedData, `67` request with outer signature, `7F21` CV certificate, or request if it has neither CHAT nor dates; a CVCA certificate with CAR ≠ CHR is a link certificate and is kept out of `CertStorage`, because it has the CHR of the new CVCA), then prints their contents to stdout in the order of the arguments (errors and the banner to stderr) and the results of the checks. The version comes from the Maven filtered resource `version.properties`.
 - `CvChecker` does the checks of CV certificates, link certificates and requests against a `CertStorage` and returns `CheckResult`s (status and text); `SignedDataParser.checkSignedData()` does the same for the signed lists (signature, signer certificates, profile of the list type), `DListParser.check()` for their content. `ListType` maps the eContentType to the list name and the key purpose of its signer. ECDSA keys without domain parameters get them from the CVCA of the chain; for requests, well-known curves are tried if the CVCA is missing.
 - `de.tsenger.certain`: parsers (`CertParser`, `SignedDataParser`, `DListParser` with `CertificateListParser` for master and signer lists, `DeviationListParser`, `DefectListParser`, `BlockListParser`), verification (`CertVerifier`, `CVSigner`), `CertStorage` (holds parsed certs for chain verification), and helpers (`HashCalculator`, `CountryCode`).
