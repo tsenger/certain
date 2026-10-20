@@ -12,31 +12,20 @@ certain is a command line parser and verifier written in Java for
 certain is tolerant: a deviation from the specification is named with a reference to the specification, and certain checks whatever can still be checked instead of aborting.
 
 <pre><code>
-Usage: certain [options]
+Usage: certain [options] &lt;file&gt;...
   Options:
-    --cert, -c
-      CVCA, DV or terminal certificate files (e.g. -c &lt;file1&gt; [&lt;file2&gt; ...])
     --details, -d
       Show more details: full public key values and signature bytes of CV
       certificates and requests, the X.509 certificates of master and signer
       lists, replacement certificates of defect lists and the IDs of block
       lists
       Default: false
-    --dlist, -dl
-      Deviation List, Defect List or Block List file, shows all deviations,
-      defects or blocked IDs
-    --dvreq, -r
-      DV certificate request file
     --fingerprint, -f
       Show MD5, SHA-1, SHA-224 and SHA-256 fingerprints of certificates and
       requests
       Default: false
     --help, -h
       Show this help and exit
-    --linkcert, -l
-      Link certificate file (to a new CVCA)
-    --masterlist, -ml
-      ICAO CSCA Master List or BSI Signer List file (BSI TR-03129-2, 9)
     --version, -V
       Show the version and exit
       Default: false
@@ -49,7 +38,9 @@ Usage: certain [options]
 
 The contents and the results of the checks are written to stdout, error messages to stderr. The exit code summarizes the checks, so that certain can be used in scripts: `0` if every check passed, `1` if a check failed (e.g. an invalid signature or a violated MUST of the specification), `2` on wrong usage or if an input file could not be read or parsed, and `3` if a check could not be done (e.g. because the issuer certificate was not given). If several apply, `1` takes precedence over `2`, and `2` over `3`. Lines starting with `Note:` are informative (e.g. an expired certificate or a RECOMMENDED field that is missing) and do not affect the exit code.
 
-`-ml` and `-dl` both accept any of the signed lists; the eContentType of the SignedData object decides how the content is parsed.
+certain detects the type of every file from its content: CMS SignedData is a signed list (its eContentType decides how the content is parsed), a CV certificate with the role CVCA whose CAR differs from its CHR is a link certificate, a CV certificate without CHAT and dates or with an outer signature is a certificate request, every other CV certificate is a CVCA, DV or terminal certificate. All files are read before they are checked, so a chain can be given in any order (e.g. `certain cvca.cvcert dv.cvcert ta.cvcert`), and the output follows the order of the arguments. A file that is none of these is reported with exit code `2`.
+
+Since version 2.0.0 the options `-c`, `-r`, `-l`, `-ml` and `-dl` of version 1 are deprecated: they still work, but certain notes on stderr that the files should be passed as arguments. They will be removed in the next major version.
 
 ## Download
 Get the latest release here: https://github.com/tsenger/certain/releases/
@@ -59,14 +50,14 @@ certain needs Java 8 or newer and Maven. The Maven project is in the subdirector
 <pre><code>
 cd certain
 mvn package
-java -jar target/certain-1.0.0.jar -c &lt;cert files...&gt;
+java -jar target/certain-2.0.0.jar &lt;files...&gt;
 </code></pre>
 
 ## Examples
 ### CV certificate
 input:
 <pre><code>
-java -jar certain.jar -c DETESTeID00004.cv
+java -jar certain.jar DETESTeID00004.cv
 </code></pre>
 
 output:
@@ -115,7 +106,7 @@ Signature is VALID
 ### CSCA Master List
 input:
 <pre><code>
-java -jar certain.jar -ml DE_ML_2026-10-01-11-50-52.ml
+java -jar certain.jar DE_ML_2026-10-01-11-50-52.ml
 </code></pre>
 
 output (shortened):
