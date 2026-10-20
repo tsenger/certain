@@ -359,10 +359,15 @@ public interface BSIObjectIdentifiers {
 	public static final ASN1ObjectIdentifier certReplaced = AuthDefect.branch("2");
 	public static final ASN1ObjectIdentifier certChipAuthKeyRevoked = AuthDefect.branch("3");
 	public static final ASN1ObjectIdentifier certActiveAuthKeyRevoked = AuthDefect.branch("4");
+	public static final ASN1ObjectIdentifier AuthenticationProtocolFailure = AuthDefect.branch("5");
+	public static final ASN1ObjectIdentifier ValidityPeriodIncorrect = AuthDefect.branch("6");
 	public static final ASN1ObjectIdentifier ePassportDefect = DefectList.branch("2");
 	public static final ASN1ObjectIdentifier ePassportDGMalformed = ePassportDefect.branch("1");
 	public static final ASN1ObjectIdentifier SODInvalid = ePassportDefect.branch("2");
 	public static final ASN1ObjectIdentifier COMSODDiscrepancy = ePassportDefect.branch("3");
+	public static final ASN1ObjectIdentifier sodWrongSignerIdentifier = ePassportDefect.branch("4");
+	public static final ASN1ObjectIdentifier IssuingCountryDefect = ePassportDefect.branch("5");
+	public static final ASN1ObjectIdentifier DistinguishedNameDefect = ePassportDefect.branch("6");
 	public static final ASN1ObjectIdentifier eIDDefect = DefectList.branch("3");
 	public static final ASN1ObjectIdentifier eIDDGMalformed = eIDDefect.branch("1");
 	public static final ASN1ObjectIdentifier eIDIntegrity = eIDDefect.branch("2");
@@ -374,6 +379,33 @@ public interface BSIObjectIdentifiers {
 	public static final ASN1ObjectIdentifier PowerDownReq = DocumentDefect.branch("3");
 	public static final ASN1ObjectIdentifier DSMalformed = DocumentDefect.branch("4");
 	public static final ASN1ObjectIdentifier EAC2PrivilegedTerminalInfoMissing = DocumentDefect.branch("5");
+	public static final ASN1ObjectIdentifier CertificateMalformed = DocumentDefect.branch("6");
+
+	public static final ASN1ObjectIdentifier DocumentSignerList = mrtd.branch("6");
+
+	// nPKD (BSI TR-03129-2, 8.2 and 9)
+	public static final ASN1ObjectIdentifier npkd = applications.branch("11");
+	public static final ASN1ObjectIdentifier certificateExchange = npkd.branch("1");
+	public static final ASN1ObjectIdentifier sovereignSeal = certificateExchange.branch("1");
+	public static final ASN1ObjectIdentifier sovereignSealSignerList = sovereignSeal.branch("1");
+	public static final ASN1ObjectIdentifier sovereignSealSignerListSigningKey = sovereignSeal.branch("2");
+	public static final ASN1ObjectIdentifier sovereignSealCscaList = sovereignSeal.branch("3");
+	public static final ASN1ObjectIdentifier sovereignSealCscaListSigningKey = sovereignSeal.branch("4");
+	public static final ASN1ObjectIdentifier euHealthSeal = certificateExchange.branch("2");
+	public static final ASN1ObjectIdentifier euHealthSealSignerList = euHealthSeal.branch("1");
+	public static final ASN1ObjectIdentifier euHealthSealSignerListSigningKey = euHealthSeal.branch("2");
+	public static final ASN1ObjectIdentifier euHealthSealCscaList = euHealthSeal.branch("3");
+	public static final ASN1ObjectIdentifier euHealthSealCscaListSigningKey = euHealthSeal.branch("4");
+	public static final ASN1ObjectIdentifier icaoHealthSeal = certificateExchange.branch("3");
+	public static final ASN1ObjectIdentifier icaoHealthSealSignerList = icaoHealthSeal.branch("1");
+	public static final ASN1ObjectIdentifier icaoHealthSealSignerListSigningKey = icaoHealthSeal.branch("2");
+	public static final ASN1ObjectIdentifier icaoHealthSealCscaList = icaoHealthSeal.branch("3");
+	public static final ASN1ObjectIdentifier icaoHealthSealCscaListSigningKey = icaoHealthSeal.branch("4");
+	public static final ASN1ObjectIdentifier documentSigner = certificateExchange.branch("4");
+	public static final ASN1ObjectIdentifier documentSignerListSigningKey = documentSigner.branch("2");
+	public static final ASN1ObjectIdentifier defectExchange = npkd.branch("2");
+	public static final ASN1ObjectIdentifier electronicDefect = defectExchange.branch("1");
+	public static final ASN1ObjectIdentifier electronicDefectListSigningKey = electronicDefect.branch("2");
 
 	// eID
 	public static final ASN1ObjectIdentifier eID = applications.branch("2");

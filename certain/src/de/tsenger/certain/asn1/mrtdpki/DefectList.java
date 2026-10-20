@@ -12,11 +12,11 @@ import org.bouncycastle.asn1.BERSequence;
 
 
 /**
- * DefectList as specified in BSI TR-03129
+ * DefectList as specified in BSI TR-03129-2, 8.1
  * <p/>
  * <pre>
  *  DefectList ::= SEQUENCE {
- *  	version		INTEGER {v1 (0) },
+ *  	version		INTEGER {v1(0), v2(1), v3(2)},
  *  	hashAlg		OBJECT IDENTIFIER,
  *  	defects		SET OF Defect
  *  }
