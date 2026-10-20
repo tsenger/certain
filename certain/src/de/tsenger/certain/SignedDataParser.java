@@ -253,13 +253,11 @@ public class SignedDataParser {
 	}
 	
 	private CMSSignedData buildCMSSignedDataFromBinary(byte[] binary) {
-		CMSSignedData signedData =null;
 		try {
-			signedData = new CMSSignedData(binary);
+			return new CMSSignedData(binary);
 		} catch (CMSException e) {
-			System.out.println("Couldn't find a SignedData object: "+e.getLocalizedMessage());
+			throw new IllegalArgumentException("Couldn't find a SignedData object: "+e.getLocalizedMessage(), e);
 		}
-		return signedData;
 	}
 	
 	
