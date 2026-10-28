@@ -32,8 +32,6 @@ All notable changes to certain are documented in this file. The format is based 
 
 ## 1.0.0 - 2023-10-31
 
-Not tagged in this repository.
-
 ### Added
 - CHAT bits for PSA and read/write access to DG22.
 
